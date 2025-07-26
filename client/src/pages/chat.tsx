@@ -383,17 +383,17 @@ export default function Chat() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col max-w-4xl mx-auto bg-white shadow-xl">
+    <div className="min-h-screen flex flex-col max-w-4xl mx-auto bg-white shadow-xl" style={{ background: 'var(--chat-bg)' }}>
       {/* Header */}
       <header className="bg-primary text-white px-4 py-3 shadow-lg">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-              💬
+              🐺
             </div>
             <div>
-              <h1 className="text-lg font-semibold">FreeChat</h1>
-              <p className="text-sm text-indigo-200">Public Chat Room</p>
+              <h1 className="text-lg font-semibold">LycanChat</h1>
+              <p className="text-sm text-orange-200">Lycanroc Spirit Chat</p>
             </div>
           </div>
           <div className="flex items-center space-x-4">
@@ -423,10 +423,10 @@ export default function Chat() {
 
       {/* Nickname Setup */}
       {!chatState.nickname && (
-        <div className="p-6 border-b border-chat-border bg-blue-50/50">
+        <div className="p-6 border-b border-chat-border bg-lycan-accent/30">
           <div className="max-w-md mx-auto">
-            <h2 className="text-lg font-semibold text-chat-text mb-2">Choose Your Nickname</h2>
-            <p className="text-sm text-gray-600 mb-4">Enter a nickname to start chatting with everyone!</p>
+            <h2 className="text-lg font-semibold text-chat-text mb-2">Join the Pack</h2>
+            <p className="text-sm text-gray-600 mb-4">Enter a nickname to unleash your Lycanroc spirit!</p>
             <div className="flex space-x-2">
               <Input
                 type="text"
@@ -456,8 +456,8 @@ export default function Chat() {
         <div className="flex-1 overflow-y-auto p-4 space-y-3" data-testid="messages-container">
           {/* Welcome Message */}
           <div className="flex justify-center">
-            <div className="bg-gray-100 text-gray-600 px-4 py-2 rounded-full text-sm">
-              Welcome to FreeChat! Start a conversation with anyone.
+            <div className="bg-lycan-accent text-lycan-primary px-4 py-2 rounded-full text-sm">
+              Welcome to LycanChat! Join the pack and start howling! 🐺
             </div>
           </div>
 

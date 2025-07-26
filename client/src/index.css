@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 :root {
-  --background: hsl(0, 0%, 100%);
-  --foreground: hsl(20, 14.3%, 4.1%);
+  --background: hsl(33, 100%, 99%);
+  --foreground: hsl(25, 25%, 15%);
   --muted: hsl(60, 4.8%, 95.9%);
   --muted-foreground: hsl(25, 5.3%, 44.7%);
   --popover: hsl(0, 0%, 100%);
@@ -12,10 +12,10 @@
   --card: hsl(0, 0%, 100%);
   --card-foreground: hsl(20, 14.3%, 4.1%);
   --border: hsl(20, 5.9%, 90%);
-  --input: hsl(20, 5.9%, 90%);
-  --primary: hsl(238, 84%, 65%);
-  --primary-foreground: hsl(211, 100%, 99%);
-  --secondary: hsl(60, 4.8%, 95.9%);
+  --input: hsl(28, 30%, 85%);
+  --primary: hsl(25, 85%, 50%);
+  --primary-foreground: hsl(33, 100%, 99%);
+  --secondary: hsl(28, 40%, 92%);
   --secondary-foreground: hsl(24, 9.8%, 10%);
   --accent: hsl(60, 4.8%, 95.9%);
   --accent-foreground: hsl(24, 9.8%, 10%);
@@ -24,12 +24,15 @@
   --ring: hsl(20, 14.3%, 4.1%);
   --radius: 0.5rem;
   
-  /* Custom chat colors */
-  --chat-bg: hsl(210, 40%, 98%);
-  --chat-bubble: hsl(0, 0%, 100%);
-  --chat-sent: hsl(238, 84%, 65%);
-  --chat-text: hsl(216, 25%, 25%);
-  --chat-border: hsl(214, 13%, 90%);
+  /* LycanChat orange theme colors */
+  --chat-bg: hsl(33, 100%, 96%);
+  --chat-bubble: hsl(33, 100%, 98%);
+  --chat-sent: hsl(25, 85%, 50%);
+  --chat-text: hsl(25, 25%, 20%);
+  --chat-border: hsl(28, 50%, 80%);
+  --lycan-primary: hsl(25, 85%, 50%);
+  --lycan-secondary: hsl(28, 70%, 65%);
+  --lycan-accent: hsl(33, 90%, 75%);
 }
 
 .dark {
@@ -70,6 +73,42 @@
   body {
     @apply font-sans antialiased bg-background text-foreground;
     font-family: 'Inter', system-ui, sans-serif;
+  }
+}
+
+@layer utilities {
+  .text-lycan-primary {
+    color: hsl(var(--lycan-primary));
+  }
+  
+  .text-lycan-secondary {
+    color: hsl(var(--lycan-secondary));
+  }
+  
+  .text-lycan-accent {
+    color: hsl(var(--lycan-accent));
+  }
+  
+  .bg-lycan-primary {
+    background-color: hsl(var(--lycan-primary));
+  }
+  
+  .bg-lycan-secondary {
+    background-color: hsl(var(--lycan-secondary));
+  }
+  
+  .bg-lycan-accent {
+    background-color: hsl(var(--lycan-accent));
+  }
+  
+  .from-lycan-primary {
+    --tw-gradient-from: hsl(var(--lycan-primary));
+    --tw-gradient-to: hsl(var(--lycan-primary) / 0);
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+  }
+  
+  .to-lycan-secondary {
+    --tw-gradient-to: hsl(var(--lycan-secondary));
   }
 }
 

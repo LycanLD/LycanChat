@@ -1,12 +1,13 @@
-# Chat Application
+# LycanChat
 
 ## Overview
 
-This is a real-time chat application built with a modern full-stack architecture. The application features a React frontend with TypeScript, an Express.js backend, and uses PostgreSQL as the database with Drizzle ORM for database operations. The frontend is styled with Tailwind CSS and uses shadcn/ui components for a polished user interface.
+LycanChat is a real-time chat application inspired by Lycanroc-Dusk Form with an orange-themed design. Built with a modern full-stack architecture, it features a React frontend with TypeScript, an Express.js backend, and uses memory-only storage for ephemeral messaging. The frontend is styled with Tailwind CSS using a custom orange/amber color scheme that reflects the Lycanroc spirit, complete with shadcn/ui components for a polished user interface.
 
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+Branding: LycanChat with Lycanroc-Dusk Form orange theme and wolf/pack references.
 
 ## System Architecture
 
