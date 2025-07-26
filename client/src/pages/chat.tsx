@@ -6,6 +6,8 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useSocket } from "@/hooks/use-socket";
+import { useLanguage } from "@/hooks/use-language";
+import { LanguageSelector } from "@/components/language-selector";
 import { Plus, Download, Image, FileText, Upload } from "lucide-react";
 import type { Message } from "@shared/schema";
 
@@ -56,6 +58,7 @@ export default function Chat() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { t } = useLanguage();
   const { 
     isConnected, 
     userCount, 
@@ -94,7 +97,7 @@ export default function Chat() {
       } else {
         toast({
           title: "Error",
-          description: "Failed to send message. Please try again.",
+          description: t.errorSendMessage,
           variant: "destructive",
         });
       }
@@ -123,7 +126,7 @@ export default function Chat() {
     onSuccess: () => {
       toast({
         title: "File uploaded",
-        description: "Your file has been shared in the chat.",
+        description: t.fileUploaded,
       });
       // Reset file input
       if (fileInputRef.current) {
@@ -132,8 +135,8 @@ export default function Chat() {
     },
     onError: (error: any) => {
       toast({
-        title: "Upload failed",
-        description: error.message || "Failed to upload file. Please try again.",
+        title: "Upload failed", 
+        description: error.message || t.uploadFailed,
         variant: "destructive",
       });
     },
@@ -197,7 +200,7 @@ export default function Chat() {
     const unsubscribeUserJoined = onUserJoined((data) => {
       toast({
         title: "User Joined",
-        description: `${data.username} joined the chat`,
+        description: `${data.username} ${t.userJoined}`,
       });
     });
 
@@ -297,7 +300,7 @@ export default function Chat() {
       if (file.size > 10 * 1024 * 1024) { // 10MB limit
         toast({
           title: "File too large",
-          description: "Please select a file smaller than 10MB.",
+          description: t.fileTooLarge,
           variant: "destructive",
         });
         return;
@@ -325,7 +328,7 @@ export default function Chat() {
       if (file.size > 10 * 1024 * 1024) { // 10MB limit
         toast({
           title: "File too large",
-          description: "Please select a file smaller than 10MB.",
+          description: t.fileTooLarge,
           variant: "destructive",
         });
         return;
@@ -392,18 +395,19 @@ export default function Chat() {
               🐺
             </div>
             <div>
-              <h1 className="text-lg font-semibold">LycanChat</h1>
-              <p className="text-sm text-orange-200">Lycanroc Spirit Chat</p>
+              <h1 className="text-lg font-semibold">{t.appName}</h1>
+              <p className="text-sm text-orange-200">{t.tagline}</p>
             </div>
           </div>
           <div className="flex items-center space-x-4">
+            <LanguageSelector />
             <div className="flex items-center space-x-1">
               <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}></div>
-              <span className="text-sm text-indigo-200">{isConnected ? 'Online' : 'Offline'}</span>
+              <span className="text-sm text-orange-200">{isConnected ? t.online : t.offline}</span>
             </div>
             {userCount > 0 && (
-              <div className="text-sm text-indigo-200" data-testid="user-count">
-                {userCount} user{userCount !== 1 ? 's' : ''} online
+              <div className="text-sm text-orange-200" data-testid="user-count">
+                {userCount} {t.userCount}
               </div>
             )}
             {chatState.nickname && (
@@ -411,10 +415,10 @@ export default function Chat() {
                 variant="ghost"
                 size="sm"
                 onClick={handleLogout}
-                className="text-indigo-200 hover:text-white hover:bg-white/10"
+                className="text-orange-200 hover:text-white hover:bg-white/10"
                 data-testid="button-logout"
               >
-                Logout
+                {t.logout}
               </Button>
             )}
           </div>
@@ -425,12 +429,12 @@ export default function Chat() {
       {!chatState.nickname && (
         <div className="p-6 border-b border-chat-border bg-lycan-accent/30">
           <div className="max-w-md mx-auto">
-            <h2 className="text-lg font-semibold text-chat-text mb-2">Join the Pack</h2>
-            <p className="text-sm text-gray-600 mb-4">Enter a nickname to unleash your Lycanroc spirit!</p>
+            <h2 className="text-lg font-semibold text-chat-text mb-2">{t.joinPack}</h2>
+            <p className="text-sm text-gray-600 mb-4">{t.nicknamePrompt}</p>
             <div className="flex space-x-2">
               <Input
                 type="text"
-                placeholder="Enter your nickname..."
+                placeholder={t.nicknamePlaceholder}
                 value={nicknameInput}
                 onChange={(e) => setNicknameInput(e.target.value)}
                 onKeyPress={handleKeyPress}
@@ -444,7 +448,7 @@ export default function Chat() {
                 className="px-4 py-2"
                 data-testid="button-join-chat"
               >
-                {setNicknameMutation.isPending ? "Joining..." : "Join Chat"}
+                {setNicknameMutation.isPending ? t.joining : t.joinChat}
               </Button>
             </div>
           </div>
@@ -457,14 +461,14 @@ export default function Chat() {
           {/* Welcome Message */}
           <div className="flex justify-center">
             <div className="bg-lycan-accent text-lycan-primary px-4 py-2 rounded-full text-sm">
-              Welcome to LycanChat! Join the pack and start howling! 🐺
+              {t.welcomeMessage}
             </div>
           </div>
 
           {/* Loading State */}
           {isLoading && chatState.nickname && (
             <div className="flex justify-center">
-              <div className="text-gray-500 text-sm">Loading messages...</div>
+              <div className="text-gray-500 text-sm">{t.loadingMessages}</div>
             </div>
           )}
 
@@ -546,7 +550,7 @@ export default function Chat() {
           {isDragOver && (
             <div className="text-center py-4 text-blue-600 border-2 border-dashed border-blue-300 rounded-lg mb-4">
               <Upload className="mx-auto w-8 h-8 mb-2" />
-              <p>Drop your file here to share</p>
+              <p>{t.dragDropMessage}</p>
             </div>
           )}
           
@@ -566,7 +570,7 @@ export default function Chat() {
               <div className="relative">
                 <Input
                   type="text"
-                  placeholder="Type your message..."
+                  placeholder={t.messagePlaceholder}
                   value={messageInput}
                   onChange={(e) => {
                     setMessageInput(e.target.value);
@@ -584,13 +588,13 @@ export default function Chat() {
               
               {showRateLimit && (
                 <div className="text-xs text-orange-600 mt-1" data-testid="rate-limit-warning">
-                  ⏱️ Please wait a moment before sending another message.
+                  ⏱️ {t.rateLimitMessage}
                 </div>
               )}
               
               {uploadFileMutation.isPending && (
                 <div className="text-xs text-blue-600 mt-1" data-testid="upload-progress">
-                  📎 Uploading file...
+                  📎 {t.uploading}
                 </div>
               )}
             </div>
@@ -603,7 +607,7 @@ export default function Chat() {
             >
               📤
               <span className="ml-2 hidden sm:inline">
-                {sendMessageMutation.isPending ? "Sending..." : "Send"}
+                {sendMessageMutation.isPending ? t.sending : t.send}
               </span>
             </Button>
           </div>
