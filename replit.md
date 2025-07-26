@@ -55,6 +55,16 @@ The application uses a simple nickname-based system with local storage persisten
 - **Logout Functionality**: Users can explicitly log out to change nicknames
 - **Real-time Presence**: Live user count showing currently connected users
 
+### File Sharing Features
+The chat application supports rich media sharing with the following capabilities:
+- **Image Upload**: Direct image sharing with thumbnail previews and full-size viewing
+- **File Upload**: Support for documents, media files, and archives up to 10MB
+- **Drag & Drop**: Intuitive drag-and-drop interface for file sharing
+- **Base64 Storage**: Files are stored as base64 data URLs for simple memory-based persistence
+- **Download Support**: One-click download functionality for shared files
+- **File Type Validation**: Security filtering for allowed file types (images, documents, media)
+- **Real-time Delivery**: Instant file sharing via Socket.IO broadcasting
+
 ## External Dependencies
 
 ### Core Libraries

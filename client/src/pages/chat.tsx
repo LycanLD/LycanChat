@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useSocket } from "@/hooks/use-socket";
+import { Plus, Download, Image, FileText, Upload } from "lucide-react";
 import type { Message } from "@shared/schema";
 
 interface ChatState {
@@ -49,8 +50,10 @@ export default function Chat() {
   const [messageInput, setMessageInput] = useState("");
   const [showRateLimit, setShowRateLimit] = useState(false);
   const [allMessages, setAllMessages] = useState<Message[]>([]);
+  const [isDragOver, setIsDragOver] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { 
@@ -95,6 +98,44 @@ export default function Chat() {
           variant: "destructive",
         });
       }
+    },
+  });
+
+  // File upload mutation
+  const uploadFileMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('username', chatState.nickname!);
+      
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Upload failed');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "File uploaded",
+        description: "Your file has been shared in the chat.",
+      });
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Upload failed",
+        description: error.message || "Failed to upload file. Please try again.",
+        variant: "destructive",
+      });
     },
   });
 
@@ -246,6 +287,101 @@ export default function Chat() {
     });
   };
 
+  const handleFileSelect = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && chatState.nickname) {
+      if (file.size > 10 * 1024 * 1024) { // 10MB limit
+        toast({
+          title: "File too large",
+          description: "Please select a file smaller than 10MB.",
+          variant: "destructive",
+        });
+        return;
+      }
+      uploadFileMutation.mutate(file);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    
+    const file = e.dataTransfer.files?.[0];
+    if (file && chatState.nickname) {
+      if (file.size > 10 * 1024 * 1024) { // 10MB limit
+        toast({
+          title: "File too large",
+          description: "Please select a file smaller than 10MB.",
+          variant: "destructive",
+        });
+        return;
+      }
+      uploadFileMutation.mutate(file);
+    }
+  };
+
+  const renderMessageContent = (message: Message) => {
+    if (message.type === 'image' && message.fileUrl) {
+      return (
+        <div className="space-y-2">
+          <img 
+            src={message.fileUrl} 
+            alt={message.fileName || 'Uploaded image'} 
+            className="max-w-xs max-h-64 rounded-lg object-cover cursor-pointer"
+            onClick={() => message.fileUrl && window.open(message.fileUrl, '_blank')}
+            data-testid={`image-${message.id}`}
+          />
+          <div className="text-xs text-gray-500">
+            {message.fileName} • {message.fileSize}
+          </div>
+        </div>
+      );
+    } else if (message.type === 'file' && message.fileUrl) {
+      return (
+        <div className="flex items-center space-x-2 p-2 bg-gray-50 rounded border">
+          <FileText className="w-6 h-6 text-blue-500" />
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium truncate">{message.fileName}</div>
+            <div className="text-xs text-gray-500">{message.fileSize}</div>
+          </div>
+          <Button 
+            size="sm" 
+            variant="ghost"
+            onClick={() => {
+              const link = document.createElement('a');
+              link.href = message.fileUrl!;
+              link.download = message.fileName || 'download';
+              link.click();
+            }}
+            data-testid={`download-${message.id}`}
+          >
+            <Download className="w-4 h-4" />
+          </Button>
+        </div>
+      );
+    } else {
+      return (
+        <p className={`text-sm ${message.username === chatState.nickname ? '' : 'text-chat-text'}`} data-testid={`content-${message.id}`}>
+          {message.content}
+        </p>
+      );
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col max-w-4xl mx-auto bg-white shadow-xl">
       {/* Header */}
@@ -368,9 +504,7 @@ export default function Chat() {
                       ? 'bg-chat-sent text-white rounded-lg rounded-tr-sm ml-auto' 
                       : 'bg-chat-bubble border border-chat-border rounded-lg rounded-tl-sm'
                   } px-3 py-2 shadow-sm`}>
-                    <p className={`text-sm ${isOwnMessage ? '' : 'text-chat-text'}`} data-testid={`content-${message.id}`}>
-                      {message.content}
-                    </p>
+                    {renderMessageContent(message)}
                   </div>
                 </div>
 
@@ -403,8 +537,31 @@ export default function Chat() {
 
       {/* Message Input */}
       {chatState.nickname && (
-        <div className="border-t border-chat-border bg-white p-4">
+        <div 
+          className={`border-t border-chat-border bg-white p-4 ${isDragOver ? 'bg-blue-50 border-blue-300' : ''}`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          {isDragOver && (
+            <div className="text-center py-4 text-blue-600 border-2 border-dashed border-blue-300 rounded-lg mb-4">
+              <Upload className="mx-auto w-8 h-8 mb-2" />
+              <p>Drop your file here to share</p>
+            </div>
+          )}
+          
           <div className="flex space-x-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleFileSelect}
+              disabled={uploadFileMutation.isPending}
+              className="p-2 text-gray-500 hover:text-gray-700"
+              data-testid="button-upload-file"
+            >
+              <Plus className="w-5 h-5" />
+            </Button>
+            
             <div className="flex-1">
               <div className="relative">
                 <Input
@@ -430,7 +587,14 @@ export default function Chat() {
                   ⏱️ Please wait a moment before sending another message.
                 </div>
               )}
+              
+              {uploadFileMutation.isPending && (
+                <div className="text-xs text-blue-600 mt-1" data-testid="upload-progress">
+                  📎 Uploading file...
+                </div>
+              )}
             </div>
+            
             <Button
               onClick={handleSendMessage}
               disabled={sendMessageMutation.isPending || !messageInput.trim()}
@@ -443,6 +607,16 @@ export default function Chat() {
               </span>
             </Button>
           </div>
+          
+          {/* Hidden file input */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            accept="image/*,.pdf,.txt,.doc,.docx,.zip,.mp4,.mp3"
+            className="hidden"
+            data-testid="file-input"
+          />
         </div>
       )}
 

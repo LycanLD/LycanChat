@@ -96,6 +96,10 @@ export class MemStorage implements IStorage {
       ...insertMessage,
       id,
       timestamp: new Date(),
+      type: insertMessage.type || "text",
+      fileName: insertMessage.fileName || null,
+      fileSize: insertMessage.fileSize || null,
+      fileUrl: insertMessage.fileUrl || null,
     };
     this.messages.push(message);
     
@@ -120,5 +124,5 @@ export class MemStorage implements IStorage {
   }
 }
 
-// Use PostgreSQL if DATABASE_URL is available, otherwise fallback to memory
-export const storage = process.env.DATABASE_URL ? new PgStorage() : new MemStorage();
+// Use memory storage for simple, ephemeral chat experience
+export const storage = new MemStorage();

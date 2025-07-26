@@ -1,6 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { Server as SocketIOServer } from "socket.io";
+import multer from "multer";
+import path from "path";
 import { storage } from "./storage";
 import { insertMessageSchema } from "@shared/schema";
 import { z } from "zod";
@@ -8,6 +10,26 @@ import { z } from "zod";
 // Rate limiting map: username -> last message time
 const rateLimitMap = new Map<string, number>();
 const RATE_LIMIT_MS = 1000; // 1 second between messages
+
+// Configure multer for file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Allow images and common file types
+    const allowedTypes = /jpeg|jpg|png|gif|webp|pdf|txt|doc|docx|zip|mp4|mp3/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Only images, documents, and media files are allowed!'));
+    }
+  }
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Get recent messages
@@ -104,6 +126,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ valid: true, message: "Username is valid" });
     } catch (error) {
       res.status(500).json({ message: "Failed to validate username" });
+    }
+  });
+
+  // File upload endpoint
+  app.post("/api/upload", upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const { username } = req.body;
+      if (!username) {
+        return res.status(400).json({ message: "Username is required" });
+      }
+
+      // Convert file to base64 for storage in memory
+      const fileBase64 = req.file.buffer.toString('base64');
+      const fileUrl = `data:${req.file.mimetype};base64,${fileBase64}`;
+      
+      // Determine message type
+      const isImage = req.file.mimetype.startsWith('image/');
+      const messageType = isImage ? 'image' : 'file';
+      
+      // Format file size
+      const formatFileSize = (bytes: number): string => {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+      };
+
+      // Create message with file data
+      const messageData = {
+        username,
+        content: req.file.originalname, // Use filename as content
+        type: messageType as "text" | "image" | "file",
+        fileName: req.file.originalname,
+        fileSize: formatFileSize(req.file.size),
+        fileUrl: fileUrl
+      };
+
+      const message = await storage.createMessage(messageData);
+      
+      // Emit the new message to all connected clients via Socket.IO
+      if ((globalThis as any).io) {
+        (globalThis as any).io.emit('new_message', message);
+      }
+      
+      res.status(201).json(message);
+    } catch (error) {
+      console.error('Upload error:', error);
+      res.status(500).json({ message: "Failed to upload file" });
     }
   });
 
