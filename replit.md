@@ -25,11 +25,12 @@ The application follows a monorepo structure with clear separation between clien
 - **Component Library**: shadcn/ui components built on Radix UI primitives
 - **Styling**: Tailwind CSS with custom CSS variables for theming
 - **State Management**: React Query for API calls and caching
-- **Real-time Updates**: Polling-based message updates using React Query
+- **Real-time Updates**: Socket.IO for instant message delivery and live features
 
 ### Backend Architecture
 - **Express Server**: RESTful API with middleware for logging and error handling
-- **Storage Layer**: Abstracted storage interface with in-memory implementation (ready for database integration)
+- **Socket.IO Integration**: Real-time bidirectional communication for instant messaging
+- **Storage Layer**: PostgreSQL database with Drizzle ORM for persistent data storage
 - **Rate Limiting**: Simple in-memory rate limiting for message posting
 - **Development Setup**: Vite integration for development with HMR support
 
@@ -43,12 +44,16 @@ The application defines two main entities:
 
 1. **Message Creation**: Users post messages through the frontend form
 2. **API Processing**: Backend validates message data and applies rate limiting
-3. **Storage**: Messages are stored using the storage abstraction layer
-4. **Real-time Updates**: Frontend polls for new messages using React Query
+3. **Database Storage**: Messages are persisted to PostgreSQL database via Drizzle ORM
+4. **Real-time Broadcasting**: Socket.IO instantly broadcasts new messages to all connected clients
 5. **Display**: Messages are rendered with user avatars and timestamps
+6. **Persistence**: Chat history is preserved across sessions and browser refreshes
 
 ### Authentication Flow
-Currently, the application uses a simple nickname-based system without persistent authentication. Users enter a nickname to participate in chat.
+The application uses a simple nickname-based system with local storage persistence. Users enter a nickname which is saved locally for future sessions. Key features:
+- **Session Persistence**: Nicknames are remembered across browser sessions
+- **Logout Functionality**: Users can explicitly log out to change nicknames
+- **Real-time Presence**: Live user count showing currently connected users
 
 ## External Dependencies
 

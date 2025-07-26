@@ -129,6 +129,22 @@ export default function Chat() {
     }
   }, [messages]);
 
+  // Save nickname to localStorage for persistence
+  useEffect(() => {
+    const savedNickname = localStorage.getItem('chat-nickname');
+    if (savedNickname && !chatState.nickname) {
+      setChatState(prev => ({ ...prev, nickname: savedNickname }));
+    }
+  }, [chatState.nickname]);
+
+  useEffect(() => {
+    if (chatState.nickname) {
+      localStorage.setItem('chat-nickname', chatState.nickname);
+    } else {
+      localStorage.removeItem('chat-nickname');
+    }
+  }, [chatState.nickname]);
+
   // Socket.IO event listeners
   useEffect(() => {
     if (!chatState.nickname) return;
@@ -220,6 +236,16 @@ export default function Chat() {
     }
   };
 
+  const handleLogout = () => {
+    setChatState({ nickname: null, lastMessageTime: new Date() });
+    setAllMessages([]);
+    localStorage.removeItem('chat-nickname');
+    toast({
+      title: "Logged out",
+      description: "You have been logged out of the chat.",
+    });
+  };
+
   return (
     <div className="min-h-screen flex flex-col max-w-4xl mx-auto bg-white shadow-xl">
       {/* Header */}
@@ -243,6 +269,17 @@ export default function Chat() {
               <div className="text-sm text-indigo-200" data-testid="user-count">
                 {userCount} user{userCount !== 1 ? 's' : ''} online
               </div>
+            )}
+            {chatState.nickname && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                className="text-indigo-200 hover:text-white hover:bg-white/10"
+                data-testid="button-logout"
+              >
+                Logout
+              </Button>
             )}
           </div>
         </div>

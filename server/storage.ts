@@ -1,5 +1,8 @@
-import { type User, type InsertUser, type Message, type InsertMessage } from "@shared/schema";
+import { type User, type InsertUser, type Message, type InsertMessage, users, messages } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { neon } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-http";
+import { desc, gt, eq } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -11,6 +14,56 @@ export interface IStorage {
   getMessagesAfter(timestamp: Date): Promise<Message[]>;
 }
 
+// PostgreSQL implementation
+export class PgStorage implements IStorage {
+  private db;
+
+  constructor() {
+    const sql = neon(process.env.DATABASE_URL!);
+    this.db = drizzle(sql);
+  }
+
+  async getUser(id: string): Promise<User | undefined> {
+    const result = await this.db.select().from(users).where(eq(users.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const result = await this.db.select().from(users).where(eq(users.username, username)).limit(1);
+    return result[0];
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const result = await this.db.insert(users).values(insertUser).returning();
+    return result[0];
+  }
+
+  async createMessage(insertMessage: InsertMessage): Promise<Message> {
+    const result = await this.db.insert(messages).values(insertMessage).returning();
+    return result[0];
+  }
+
+  async getMessages(limit: number = 50): Promise<Message[]> {
+    const result = await this.db.select()
+      .from(messages)
+      .orderBy(desc(messages.timestamp))
+      .limit(limit);
+    
+    // Return in ascending order (oldest to newest)
+    return result.reverse();
+  }
+
+  async getMessagesAfter(timestamp: Date): Promise<Message[]> {
+    const result = await this.db.select()
+      .from(messages)
+      .where(gt(messages.timestamp, timestamp))
+      .orderBy(messages.timestamp);
+    
+    return result;
+  }
+}
+
+// In-memory implementation (fallback)
 export class MemStorage implements IStorage {
   private users: Map<string, User>;
   private messages: Message[];
@@ -67,4 +120,5 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Use PostgreSQL if DATABASE_URL is available, otherwise fallback to memory
+export const storage = process.env.DATABASE_URL ? new PgStorage() : new MemStorage();
