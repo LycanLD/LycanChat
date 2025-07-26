@@ -107,27 +107,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Validate username availability
   app.post("/api/validate-username", async (req, res) => {
     try {
-      const { username } = req.body;
+      let { username } = req.body;
       
       if (!username || typeof username !== 'string') {
         return res.status(400).json({ message: "Username is required" });
       }
       
-      if (username.length < 2 || username.length > 20) {
+      // Trim whitespace
+      username = username.trim();
+      
+      if (username.length < 1 || username.length > 20) {
         return res.status(400).json({ 
-          message: "Username must be between 2 and 20 characters" 
+          message: "Username must be between 1 and 20 characters" 
         });
       }
       
-      // Check if username contains only alphanumeric characters and underscores
-      if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      // Check if username contains only alphanumeric characters, underscores, and basic punctuation
+      if (!/^[a-zA-Z0-9_\-\s]+$/.test(username)) {
         return res.status(400).json({ 
-          message: "Username can only contain letters, numbers, and underscores" 
+          message: "Username can only contain letters, numbers, spaces, underscores, and hyphens" 
         });
       }
       
       res.json({ valid: true, message: "Username is valid" });
     } catch (error) {
+      console.error('Username validation error:', error);
       res.status(500).json({ message: "Failed to validate username" });
     }
   });

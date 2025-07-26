@@ -44,6 +44,11 @@ export interface Translations {
 
   // Language selector
   language: string;
+  
+  // Connection status
+  connectedToServer: string;
+  staticModeTitle: string;
+  staticModeDescription: string;
 }
 
 export const translations: Record<Language, Translations> = {
@@ -82,6 +87,10 @@ export const translations: Record<Language, Translations> = {
     errorGeneral: 'An error occurred. Please try again.',
     
     language: 'Language',
+    
+    connectedToServer: 'Connected to live chat server',
+    staticModeTitle: 'Static Mode Active',
+    staticModeDescription: 'Messages are saved locally. For real-time chat, deploy on a platform that supports Node.js servers.',
   },
   
   vi: {
@@ -119,6 +128,10 @@ export const translations: Record<Language, Translations> = {
     errorGeneral: 'Đã xảy ra lỗi. Vui lòng thử lại.',
     
     language: 'Ngôn ngữ',
+    
+    connectedToServer: 'Đã kết nối với máy chủ chat trực tiếp',
+    staticModeTitle: 'Chế độ tĩnh đang hoạt động',
+    staticModeDescription: 'Tin nhắn được lưu cục bộ. Để chat thời gian thực, triển khai trên nền tảng hỗ trợ máy chủ Node.js.',
   },
   
   ru: {
@@ -156,6 +169,10 @@ export const translations: Record<Language, Translations> = {
     errorGeneral: 'Произошла ошибка. Попробуйте снова.',
     
     language: 'Язык',
+    
+    connectedToServer: 'Подключен к живому чат-серверу',
+    staticModeTitle: 'Активен статический режим',
+    staticModeDescription: 'Сообщения сохраняются локально. Для чата в реальном времени разверните на платформе с поддержкой серверов Node.js.',
   },
 };
 

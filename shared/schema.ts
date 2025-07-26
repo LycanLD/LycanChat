@@ -34,7 +34,7 @@ export const insertMessageSchema = createInsertSchema(messages).pick({
   fileUrl: true,
 }).extend({
   content: z.string().min(0, "").max(500, "Message too long"),
-  username: z.string().min(2, "Username must be at least 2 characters").max(20, "Username too long"),
+  username: z.string().min(1, "Username is required").max(20, "Username too long"),
   type: z.enum(["text", "image", "file"]).default("text"),
   fileName: z.string().optional(),
   fileSize: z.string().optional(),

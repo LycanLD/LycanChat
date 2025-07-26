@@ -158,9 +158,10 @@ export default function Chat() {
       setNicknameInput("");
     },
     onError: (error: any) => {
+      console.error('Username validation error:', error);
       toast({
         title: "Invalid Username",
-        description: error.message || "Please choose a different username.",
+        description: error.message || "Please check your username and try again.",
         variant: "destructive",
       });
     },

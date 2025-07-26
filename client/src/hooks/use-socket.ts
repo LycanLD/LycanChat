@@ -19,6 +19,8 @@ export function useSocket() {
   useEffect(() => {
     const socketInstance = io({
       autoConnect: true,
+      timeout: 10000,
+      transports: ['websocket', 'polling'],
     });
 
     socketInstance.on('connect', () => {
@@ -29,6 +31,11 @@ export function useSocket() {
     socketInstance.on('disconnect', () => {
       setIsConnected(false);
       console.log('Disconnected from server');
+    });
+
+    socketInstance.on('connect_error', (error) => {
+      setIsConnected(false);
+      console.error('Connection error:', error);
     });
 
     socketInstance.on('user_count', (count: number) => {
