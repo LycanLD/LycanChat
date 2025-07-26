@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useSocket } from "@/hooks/use-socket";
 import type { Message } from "@shared/schema";
 
 interface ChatState {
@@ -46,26 +47,28 @@ export default function Chat() {
   });
   const [nicknameInput, setNicknameInput] = useState("");
   const [messageInput, setMessageInput] = useState("");
-  const [isConnected, setIsConnected] = useState(true);
   const [showRateLimit, setShowRateLimit] = useState(false);
+  const [allMessages, setAllMessages] = useState<Message[]>([]);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { 
+    isConnected, 
+    userCount, 
+    typingUsers, 
+    joinChat, 
+    handleTyping, 
+    stopTyping, 
+    onNewMessage, 
+    onUserJoined 
+  } = useSocket();
 
   // Query for initial messages
   const { data: messages = [], isLoading } = useQuery<Message[]>({
     queryKey: ['/api/messages'],
     enabled: !!chatState.nickname,
     refetchInterval: false,
-  });
-
-  // Polling query for new messages
-  const { data: newMessages = [] } = useQuery<Message[]>({
-    queryKey: ['/api/messages/poll', chatState.lastMessageTime.toISOString()],
-    enabled: !!chatState.nickname && messages.length > 0,
-    refetchInterval: 2000, // Poll every 2 seconds
-    select: (data) => data || [],
   });
 
   // Send message mutation
@@ -79,7 +82,7 @@ export default function Chat() {
     },
     onSuccess: () => {
       setMessageInput("");
-      queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
+      stopTyping(chatState.nickname!);
     },
     onError: (error: any) => {
       if (error.message.includes('429')) {
@@ -119,25 +122,45 @@ export default function Chat() {
     },
   });
 
-  // Update last message time when new messages arrive
+  // Initialize messages from server when nickname is set
   useEffect(() => {
-    if (newMessages.length > 0) {
-      const latestMessage = newMessages[newMessages.length - 1];
-      setChatState(prev => ({
-        ...prev,
-        lastMessageTime: new Date(latestMessage.timestamp)
-      }));
-      queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
+    if (messages && messages.length > 0) {
+      setAllMessages(messages);
     }
-  }, [newMessages, queryClient]);
+  }, [messages]);
+
+  // Socket.IO event listeners
+  useEffect(() => {
+    if (!chatState.nickname) return;
+
+    const unsubscribeNewMessage = onNewMessage((message) => {
+      setAllMessages(prev => [...prev, message]);
+    });
+
+    const unsubscribeUserJoined = onUserJoined((data) => {
+      toast({
+        title: "User Joined",
+        description: `${data.username} joined the chat`,
+      });
+    });
+
+    return () => {
+      unsubscribeNewMessage();
+      unsubscribeUserJoined();
+    };
+  }, [chatState.nickname, onNewMessage, onUserJoined, toast]);
 
   // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [allMessages]);
 
-  // Combine and sort all messages
-  const allMessages = [...messages];
+  // Join chat when nickname is set
+  useEffect(() => {
+    if (chatState.nickname) {
+      joinChat(chatState.nickname);
+    }
+  }, [chatState.nickname, joinChat]);
 
   const handleSetNickname = () => {
     const nickname = nicknameInput.trim();
@@ -191,6 +214,12 @@ export default function Chat() {
     }
   };
 
+  const onMessageInput = () => {
+    if (chatState.nickname) {
+      handleTyping(chatState.nickname);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col max-w-4xl mx-auto bg-white shadow-xl">
       {/* Header */}
@@ -198,18 +227,23 @@ export default function Chat() {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-              <i className="fas fa-comments text-sm"></i>
+              💬
             </div>
             <div>
               <h1 className="text-lg font-semibold">FreeChat</h1>
               <p className="text-sm text-indigo-200">Public Chat Room</p>
             </div>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-1">
               <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}></div>
               <span className="text-sm text-indigo-200">{isConnected ? 'Online' : 'Offline'}</span>
             </div>
+            {userCount > 0 && (
+              <div className="text-sm text-indigo-200" data-testid="user-count">
+                {userCount} user{userCount !== 1 ? 's' : ''} online
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -311,6 +345,20 @@ export default function Chat() {
               </div>
             );
           })}
+
+          {/* Typing Indicators */}
+          {typingUsers.size > 0 && (
+            <div className="flex items-center space-x-2 text-gray-500 text-sm" data-testid="typing-indicator">
+              <div className="flex space-x-1">
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+              </div>
+              <span>
+                {Array.from(typingUsers).join(', ')} {typingUsers.size === 1 ? 'is' : 'are'} typing...
+              </span>
+            </div>
+          )}
           
           <div ref={messagesEndRef} />
         </div>
@@ -326,7 +374,10 @@ export default function Chat() {
                   type="text"
                   placeholder="Type your message..."
                   value={messageInput}
-                  onChange={(e) => setMessageInput(e.target.value)}
+                  onChange={(e) => {
+                    setMessageInput(e.target.value);
+                    onMessageInput();
+                  }}
                   onKeyPress={handleKeyPress}
                   maxLength={500}
                   className="w-full pr-12"
@@ -339,8 +390,7 @@ export default function Chat() {
               
               {showRateLimit && (
                 <div className="text-xs text-orange-600 mt-1" data-testid="rate-limit-warning">
-                  <i className="fas fa-clock mr-1"></i>
-                  Please wait a moment before sending another message.
+                  ⏱️ Please wait a moment before sending another message.
                 </div>
               )}
             </div>
@@ -350,7 +400,7 @@ export default function Chat() {
               className="px-6 py-3"
               data-testid="button-send-message"
             >
-              <i className="fas fa-paper-plane"></i>
+              📤
               <span className="ml-2 hidden sm:inline">
                 {sendMessageMutation.isPending ? "Sending..." : "Send"}
               </span>
@@ -362,8 +412,7 @@ export default function Chat() {
       {/* Connection Status */}
       {!isConnected && (
         <div className="bg-red-500 text-white text-center py-2 text-sm" data-testid="connection-status">
-          <i className="fas fa-exclamation-triangle mr-2"></i>
-          Connection lost. Trying to reconnect...
+          ⚠️ Connection lost. Trying to reconnect...
         </div>
       )}
     </div>

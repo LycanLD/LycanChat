@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { Server as SocketIOServer } from "socket.io";
 import { storage } from "./storage";
 import { insertMessageSchema } from "@shared/schema";
 import { z } from "zod";
@@ -60,6 +61,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create message
       const message = await storage.createMessage(messageData);
+      
+      // Emit the new message to all connected clients via Socket.IO
+      if ((globalThis as any).io) {
+        (globalThis as any).io.emit('new_message', message);
+      }
+      
       res.status(201).json(message);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -101,5 +108,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
+  
+  // Setup Socket.IO
+  const io = new SocketIOServer(httpServer, {
+    cors: {
+      origin: "*",
+      methods: ["GET", "POST"]
+    }
+  });
+
+  // Store io instance globally for use in routes
+  (globalThis as any).io = io;
+
+  // Socket.IO connection handling
+  io.on('connection', (socket) => {
+    console.log('User connected:', socket.id);
+    
+    // Send initial user count
+    io.emit('user_count', io.engine.clientsCount);
+    
+    socket.on('disconnect', () => {
+      console.log('User disconnected:', socket.id);
+      io.emit('user_count', io.engine.clientsCount);
+    });
+
+    // Handle user joining chat
+    socket.on('join_chat', (username) => {
+      socket.data.username = username;
+      socket.broadcast.emit('user_joined', { username, timestamp: new Date() });
+    });
+
+    // Handle typing indicators
+    socket.on('typing_start', (username) => {
+      socket.broadcast.emit('user_typing', { username, typing: true });
+    });
+
+    socket.on('typing_stop', (username) => {
+      socket.broadcast.emit('user_typing', { username, typing: false });
+    });
+  });
+
   return httpServer;
 }
