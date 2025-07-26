@@ -1,0 +1,432 @@
+// server/index.ts
+import express2 from "express";
+
+// server/routes.ts
+import { createServer } from "http";
+import { Server as SocketIOServer } from "socket.io";
+import multer from "multer";
+import path from "path";
+
+// shared/schema.ts
+import { sql } from "drizzle-orm";
+import { pgTable, text, varchar, timestamp } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
+var users = pgTable("users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  username: text("username").notNull().unique(),
+  password: text("password").notNull()
+});
+var messages = pgTable("messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  username: text("username").notNull(),
+  content: text("content").notNull(),
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+  type: text("type").notNull().default("text"),
+  // "text", "image", "file"
+  fileName: text("file_name"),
+  fileSize: text("file_size"),
+  fileUrl: text("file_url")
+});
+var insertUserSchema = createInsertSchema(users).pick({
+  username: true,
+  password: true
+});
+var insertMessageSchema = createInsertSchema(messages).pick({
+  username: true,
+  content: true,
+  type: true,
+  fileName: true,
+  fileSize: true,
+  fileUrl: true
+}).extend({
+  content: z.string().min(0, "").max(500, "Message too long"),
+  username: z.string().min(2, "Username must be at least 2 characters").max(20, "Username too long"),
+  type: z.enum(["text", "image", "file"]).default("text"),
+  fileName: z.string().optional(),
+  fileSize: z.string().optional(),
+  fileUrl: z.string().optional()
+});
+
+// server/storage.ts
+import { randomUUID } from "crypto";
+import { neon } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-http";
+import { desc, gt, eq } from "drizzle-orm";
+var MemStorage = class {
+  users;
+  messages;
+  constructor() {
+    this.users = /* @__PURE__ */ new Map();
+    this.messages = [];
+  }
+  async getUser(id) {
+    return this.users.get(id);
+  }
+  async getUserByUsername(username) {
+    return Array.from(this.users.values()).find(
+      (user) => user.username === username
+    );
+  }
+  async createUser(insertUser) {
+    const id = randomUUID();
+    const user = { ...insertUser, id };
+    this.users.set(id, user);
+    return user;
+  }
+  async createMessage(insertMessage) {
+    const id = randomUUID();
+    const message = {
+      ...insertMessage,
+      id,
+      timestamp: /* @__PURE__ */ new Date(),
+      type: insertMessage.type || "text",
+      fileName: insertMessage.fileName || null,
+      fileSize: insertMessage.fileSize || null,
+      fileUrl: insertMessage.fileUrl || null
+    };
+    this.messages.push(message);
+    if (this.messages.length > 1e3) {
+      this.messages = this.messages.slice(-1e3);
+    }
+    return message;
+  }
+  async getMessages(limit = 50) {
+    return this.messages.slice(-limit).sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+  }
+  async getMessagesAfter(timestamp2) {
+    return this.messages.filter((message) => message.timestamp > timestamp2).sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+  }
+};
+var storage = new MemStorage();
+
+// server/routes.ts
+import { z as z2 } from "zod";
+var rateLimitMap = /* @__PURE__ */ new Map();
+var RATE_LIMIT_MS = 1e3;
+var joinedUsers = /* @__PURE__ */ new Set();
+var upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024
+    // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|webp|pdf|txt|doc|docx|zip|mp4|mp3/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error("Only images, documents, and media files are allowed!"));
+    }
+  }
+});
+async function registerRoutes(app2) {
+  app2.get("/api/messages", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit) || 50;
+      const messages2 = await storage.getMessages(limit);
+      res.json(messages2);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch messages" });
+    }
+  });
+  app2.get("/api/messages/poll", async (req, res) => {
+    try {
+      const after = req.query.after;
+      if (!after) {
+        return res.status(400).json({ message: "Missing 'after' timestamp parameter" });
+      }
+      const timestamp2 = new Date(after);
+      if (isNaN(timestamp2.getTime())) {
+        return res.status(400).json({ message: "Invalid timestamp format" });
+      }
+      const messages2 = await storage.getMessagesAfter(timestamp2);
+      res.json(messages2);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch new messages" });
+    }
+  });
+  app2.post("/api/messages", async (req, res) => {
+    try {
+      const messageData = insertMessageSchema.parse(req.body);
+      const now = Date.now();
+      const lastMessageTime = rateLimitMap.get(messageData.username) || 0;
+      if (now - lastMessageTime < RATE_LIMIT_MS) {
+        return res.status(429).json({
+          message: "Rate limit exceeded. Please wait before sending another message."
+        });
+      }
+      rateLimitMap.set(messageData.username, now);
+      const message = await storage.createMessage(messageData);
+      if (globalThis.io) {
+        globalThis.io.emit("new_message", message);
+      }
+      res.status(201).json(message);
+    } catch (error) {
+      if (error instanceof z2.ZodError) {
+        return res.status(400).json({
+          message: "Validation error",
+          errors: error.errors
+        });
+      }
+      res.status(500).json({ message: "Failed to create message" });
+    }
+  });
+  app2.post("/api/validate-username", async (req, res) => {
+    try {
+      const { username } = req.body;
+      if (!username || typeof username !== "string") {
+        return res.status(400).json({ message: "Username is required" });
+      }
+      if (username.length < 2 || username.length > 20) {
+        return res.status(400).json({
+          message: "Username must be between 2 and 20 characters"
+        });
+      }
+      if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+        return res.status(400).json({
+          message: "Username can only contain letters, numbers, and underscores"
+        });
+      }
+      res.json({ valid: true, message: "Username is valid" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to validate username" });
+    }
+  });
+  app2.post("/api/upload", upload.single("file"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+      const { username } = req.body;
+      if (!username) {
+        return res.status(400).json({ message: "Username is required" });
+      }
+      const fileBase64 = req.file.buffer.toString("base64");
+      const fileUrl = `data:${req.file.mimetype};base64,${fileBase64}`;
+      const isImage = req.file.mimetype.startsWith("image/");
+      const messageType = isImage ? "image" : "file";
+      const formatFileSize = (bytes) => {
+        if (bytes === 0) return "0 Bytes";
+        const k = 1024;
+        const sizes = ["Bytes", "KB", "MB", "GB"];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+      };
+      const messageData = {
+        username,
+        content: req.file.originalname,
+        // Use filename as content
+        type: messageType,
+        fileName: req.file.originalname,
+        fileSize: formatFileSize(req.file.size),
+        fileUrl
+      };
+      const message = await storage.createMessage(messageData);
+      if (globalThis.io) {
+        globalThis.io.emit("new_message", message);
+      }
+      res.status(201).json(message);
+    } catch (error) {
+      console.error("Upload error:", error);
+      res.status(500).json({ message: "Failed to upload file" });
+    }
+  });
+  const httpServer = createServer(app2);
+  const io = new SocketIOServer(httpServer, {
+    cors: {
+      origin: "*",
+      methods: ["GET", "POST"]
+    }
+  });
+  globalThis.io = io;
+  io.on("connection", (socket) => {
+    console.log("User connected:", socket.id);
+    io.emit("user_count", io.engine.clientsCount);
+    socket.on("disconnect", () => {
+      console.log("User disconnected:", socket.id);
+      if (socket.data.username) {
+        const userSockets = Array.from(io.sockets.sockets.values()).filter((s) => s.data.username === socket.data.username && s.id !== socket.id);
+        if (userSockets.length === 0) {
+          joinedUsers.delete(socket.data.username);
+        }
+      }
+      io.emit("user_count", io.engine.clientsCount);
+    });
+    socket.on("join_chat", (username) => {
+      socket.data.username = username;
+      if (!joinedUsers.has(username)) {
+        joinedUsers.add(username);
+        socket.broadcast.emit("user_joined", { username, timestamp: /* @__PURE__ */ new Date() });
+      }
+    });
+    socket.on("typing_start", (username) => {
+      socket.broadcast.emit("user_typing", { username, typing: true });
+    });
+    socket.on("typing_stop", (username) => {
+      socket.broadcast.emit("user_typing", { username, typing: false });
+    });
+  });
+  return httpServer;
+}
+
+// server/vite.ts
+import express from "express";
+import fs from "fs";
+import path3 from "path";
+import { createServer as createViteServer, createLogger } from "vite";
+
+// vite.config.ts
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import path2 from "path";
+import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
+var vite_config_default = defineConfig({
+  plugins: [
+    react(),
+    runtimeErrorOverlay(),
+    ...process.env.NODE_ENV !== "production" && process.env.REPL_ID !== void 0 ? [
+      await import("@replit/vite-plugin-cartographer").then(
+        (m) => m.cartographer()
+      )
+    ] : []
+  ],
+  resolve: {
+    alias: {
+      "@": path2.resolve(import.meta.dirname, "client", "src"),
+      "@shared": path2.resolve(import.meta.dirname, "shared"),
+      "@assets": path2.resolve(import.meta.dirname, "attached_assets")
+    }
+  },
+  root: path2.resolve(import.meta.dirname, "client"),
+  build: {
+    outDir: path2.resolve(import.meta.dirname, "dist/public"),
+    emptyOutDir: true
+  },
+  server: {
+    fs: {
+      strict: true,
+      deny: ["**/.*"]
+    }
+  }
+});
+
+// server/vite.ts
+import { nanoid } from "nanoid";
+var viteLogger = createLogger();
+function log(message, source = "express") {
+  const formattedTime = (/* @__PURE__ */ new Date()).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true
+  });
+  console.log(`${formattedTime} [${source}] ${message}`);
+}
+async function setupVite(app2, server) {
+  const serverOptions = {
+    middlewareMode: true,
+    hmr: { server },
+    allowedHosts: true
+  };
+  const vite = await createViteServer({
+    ...vite_config_default,
+    configFile: false,
+    customLogger: {
+      ...viteLogger,
+      error: (msg, options) => {
+        viteLogger.error(msg, options);
+        process.exit(1);
+      }
+    },
+    server: serverOptions,
+    appType: "custom"
+  });
+  app2.use(vite.middlewares);
+  app2.use("*", async (req, res, next) => {
+    const url = req.originalUrl;
+    try {
+      const clientTemplate = path3.resolve(
+        import.meta.dirname,
+        "..",
+        "client",
+        "index.html"
+      );
+      let template = await fs.promises.readFile(clientTemplate, "utf-8");
+      template = template.replace(
+        `src="/src/main.tsx"`,
+        `src="/src/main.tsx?v=${nanoid()}"`
+      );
+      const page = await vite.transformIndexHtml(url, template);
+      res.status(200).set({ "Content-Type": "text/html" }).end(page);
+    } catch (e) {
+      vite.ssrFixStacktrace(e);
+      next(e);
+    }
+  });
+}
+function serveStatic(app2) {
+  const distPath = path3.resolve(import.meta.dirname, "public");
+  if (!fs.existsSync(distPath)) {
+    throw new Error(
+      `Could not find the build directory: ${distPath}, make sure to build the client first`
+    );
+  }
+  app2.use(express.static(distPath));
+  app2.use("*", (_req, res) => {
+    res.sendFile(path3.resolve(distPath, "index.html"));
+  });
+}
+
+// server/index.ts
+var app = express2();
+app.use(express2.json());
+app.use(express2.urlencoded({ extended: false }));
+app.use((req, res, next) => {
+  const start = Date.now();
+  const path4 = req.path;
+  let capturedJsonResponse = void 0;
+  const originalResJson = res.json;
+  res.json = function(bodyJson, ...args) {
+    capturedJsonResponse = bodyJson;
+    return originalResJson.apply(res, [bodyJson, ...args]);
+  };
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    if (path4.startsWith("/api")) {
+      let logLine = `${req.method} ${path4} ${res.statusCode} in ${duration}ms`;
+      if (capturedJsonResponse) {
+        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+      }
+      if (logLine.length > 80) {
+        logLine = logLine.slice(0, 79) + "\u2026";
+      }
+      log(logLine);
+    }
+  });
+  next();
+});
+(async () => {
+  const server = await registerRoutes(app);
+  app.use((err, _req, res, _next) => {
+    const status = err.status || err.statusCode || 500;
+    const message = err.message || "Internal Server Error";
+    res.status(status).json({ message });
+    throw err;
+  });
+  if (app.get("env") === "development") {
+    await setupVite(app, server);
+  } else {
+    serveStatic(app);
+  }
+  const port = parseInt(process.env.PORT || "5000", 10);
+  server.listen({
+    port,
+    host: "0.0.0.0",
+    reusePort: true
+  }, () => {
+    log(`serving on port ${port}`);
+  });
+})();

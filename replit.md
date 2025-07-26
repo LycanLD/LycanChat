@@ -93,10 +93,14 @@ The chat application supports rich media sharing with the following capabilities
 - **Environment**: Uses NODE_ENV=development for development-specific features
 
 ### Production Build
-- **Frontend**: Vite builds to `dist/public` directory
-- **Backend**: esbuild bundles server code to `dist/index.js`
-- **Static Serving**: Express serves built frontend assets in production
-- **Database**: Drizzle migrations can be applied with `npm run db:push`
+- **Frontend**: Vite builds to `dist/public` directory for static deployment
+- **Backend**: Express server with Socket.IO for real-time features
+- **Database**: Memory-only storage for ephemeral messaging
+
+### Deployment Options
+- **Replit Deployment**: Recommended for full-stack app with Socket.IO real-time features
+- **Static Deployment**: `dist/public` folder can be deployed to Netlify/Vercel for basic chat (no real-time)
+- **Other Platforms**: Railway, Render, or any Node.js hosting for full feature set
 
 ### Key Configuration Files
 - **drizzle.config.ts**: Database connection and migration settings
