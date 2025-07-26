@@ -11,6 +11,9 @@ import { z } from "zod";
 const rateLimitMap = new Map<string, number>();
 const RATE_LIMIT_MS = 1000; // 1 second between messages
 
+// Track users who have already joined to prevent duplicate notifications
+const joinedUsers = new Set<string>();
+
 // Configure multer for file uploads
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -204,13 +207,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     socket.on('disconnect', () => {
       console.log('User disconnected:', socket.id);
+      
+      // Clean up joined users tracking when user disconnects
+      // Only remove if no other socket has this username
+      if (socket.data.username) {
+        const userSockets = Array.from(io.sockets.sockets.values())
+          .filter(s => s.data.username === socket.data.username && s.id !== socket.id);
+        
+        if (userSockets.length === 0) {
+          joinedUsers.delete(socket.data.username);
+        }
+      }
+      
       io.emit('user_count', io.engine.clientsCount);
     });
 
     // Handle user joining chat
     socket.on('join_chat', (username) => {
       socket.data.username = username;
-      socket.broadcast.emit('user_joined', { username, timestamp: new Date() });
+      
+      // Only emit join notification if this is a new user
+      if (!joinedUsers.has(username)) {
+        joinedUsers.add(username);
+        socket.broadcast.emit('user_joined', { username, timestamp: new Date() });
+      }
     });
 
     // Handle typing indicators
