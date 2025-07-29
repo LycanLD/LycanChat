@@ -236,9 +236,19 @@
 </head>
 <body>
   <div id="topBar">
-    <p id="userCount">Users online: 1</p>
-    <button id="logout-button" title="Logout">Logout</button>
+  <div id="userCount">Users online: 1</div>
+  <div id="loginArea" style="display: flex; gap: 8px; align-items: center;">
+    <input id="login-input" type="text" placeholder="Username"
+      style="padding: 8px 12px; border-radius: var(--radius); border: none; background-color: var(--color-primary-container); color: var(--color-on-primary-container); box-shadow: var(--elevation); width: 150px;">
+    <input id="login-pfp" type="file" accept="image/*">
+    <button id="login-button"
+      style="padding: 8px 16px; background-color: var(--color-primary); color: var(--color-on-primary); border: none; border-radius: var(--radius); font-weight: 600; cursor: pointer; box-shadow: var(--elevation);">
+      Join
+    </button>
   </div>
+  <button id="logout-button" title="Logout">Logout</button>
+</div>
+
   <div id="messages"></div>
   <div id="typingIndicator"></div>
   <form id="form" autocomplete="off" style="display: flex; gap: 12px; padding: 16px; background-color: var(--color-surface); box-shadow: var(--elevation); border-top: 1px solid #ccc;">
@@ -359,26 +369,35 @@
     chatScreen.appendChild(form);
     document.body.appendChild(chatScreen);
 
-    loginButton.addEventListener('click', () => {
-      const enteredUsername = loginInput.value.trim();
-      if (enteredUsername) {
-        username = enteredUsername;
-        if (loginPfpInput.files.length > 0) {
-          const reader = new FileReader();
-          reader.onload = function(e) {
-            profilePic = e.target.result;
-            localStorage.setItem('profilePic', profilePic);
-          };
-          reader.readAsDataURL(loginPfpInput.files[0]);
-        } else {
-          profilePic = localStorage.getItem('profilePic') || '';
-        }
-        localStorage.setItem('username', username);
-        loginScreen.style.display = 'none';
-        chatScreen.style.display = 'flex';
-        socket.emit('join', username);
-      }
-    });
+    const loginInput = document.getElementById('login-input');
+const loginPfpInput = document.getElementById('login-pfp');
+const loginButton = document.getElementById('login-button');
+const loginArea = document.getElementById('loginArea');
+
+loginButton.addEventListener('click', () => {
+  const enteredUsername = loginInput.value.trim();
+  if (enteredUsername) {
+    username = enteredUsername;
+
+    if (loginPfpInput.files.length > 0) {
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        profilePic = e.target.result;
+        localStorage.setItem('profilePic', profilePic);
+      };
+      reader.readAsDataURL(loginPfpInput.files[0]);
+    } else {
+      profilePic = localStorage.getItem('profilePic') || '';
+    }
+
+    localStorage.setItem('username', username);
+    loginArea.style.display = 'none';
+    document.getElementById('messages').style.display = 'flex';
+    document.getElementById('form').style.display = 'flex';
+    socket.emit('join', username);
+  }
+});
+
 
     // Load saved username and profilePic from localStorage
     window.addEventListener('load', () => {
