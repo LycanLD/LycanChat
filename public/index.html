@@ -168,6 +168,7 @@
   <script>
     const socket = io();
     let username = '';
+    let profilePic = '';
 
     const loginScreen = document.createElement('div');
     loginScreen.id = 'login-screen';
@@ -183,6 +184,17 @@
     loginInput.placeholder = 'Username';
     loginInput.style.cssText = 'padding: 12px 16px; font-size: 1rem; border-radius: var(--radius); border: none; box-shadow: var(--elevation); outline-offset: 2px; margin-bottom: 16px; width: 250px;';
     loginScreen.appendChild(loginInput);
+
+    const loginPfpLabel = document.createElement('label');
+    loginPfpLabel.textContent = 'Upload Profile Picture:';
+    loginPfpLabel.style.marginBottom = '8px';
+    loginScreen.appendChild(loginPfpLabel);
+
+    const loginPfpInput = document.createElement('input');
+    loginPfpInput.type = 'file';
+    loginPfpInput.accept = 'image/*';
+    loginPfpInput.style.marginBottom = '16px';
+    loginScreen.appendChild(loginPfpInput);
 
     const loginButton = document.createElement('button');
     loginButton.id = 'login-button';
@@ -224,6 +236,12 @@
     input.style.cssText = 'flex: 1; padding: 14px 16px; font-size: 1rem; border: none; border-radius: var(--radius); background-color: var(--color-primary-container); color: var(--color-on-primary-container); box-shadow: var(--elevation); transition: box-shadow 0.3s, background-color 0.3s;';
     form.appendChild(input);
 
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*,video/*,audio/*,.pdf,.doc,.docx,.txt';
+    fileInput.style.cssText = 'margin-top: 6px;';
+    form.appendChild(fileInput);
+
     const sendButton = document.createElement('button');
     sendButton.id = 'send';
     sendButton.textContent = 'Send';
@@ -237,6 +255,30 @@
       const enteredUsername = loginInput.value.trim();
       if (enteredUsername) {
         username = enteredUsername;
+        if (loginPfpInput.files.length > 0) {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            profilePic = e.target.result;
+            localStorage.setItem('profilePic', profilePic);
+          };
+          reader.readAsDataURL(loginPfpInput.files[0]);
+        } else {
+          profilePic = localStorage.getItem('profilePic') || '';
+        }
+        localStorage.setItem('username', username);
+        loginScreen.style.display = 'none';
+        chatScreen.style.display = 'flex';
+        socket.emit('join', username);
+      }
+    });
+
+    // Load saved username and profilePic from localStorage
+    window.addEventListener('load', () => {
+      const savedUsername = localStorage.getItem('username');
+      const savedProfilePic = localStorage.getItem('profilePic');
+      if (savedUsername) {
+        username = savedUsername;
+        profilePic = savedProfilePic || '';
         loginScreen.style.display = 'none';
         chatScreen.style.display = 'flex';
         socket.emit('join', username);
@@ -260,13 +302,137 @@
 
     form.addEventListener('submit', (e) => {
       e.preventDefault();
-      if (input.value.trim()) {
-        socket.emit('chat message', { username, message: input.value });
-        input.value = '';
-        typing = false;
-        socket.emit('stop typing', username);
+      if (input.value.trim() || fileInput.files.length > 0) {
+        if (fileInput.files.length > 0) {
+          const file = fileInput.files[0];
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            const fileData = e.target.result;
+            socket.emit('chat message', { username, message: input.value, file: fileData, fileName: file.name, fileType: file.type, profilePic });
+            addMessage(username, input.value, true, profilePic, fileData, file.name, file.type);
+            input.value = '';
+            fileInput.value = '';
+            typing = false;
+            socket.emit('stop typing', username);
+          };
+          reader.readAsDataURL(file);
+        } else {
+          socket.emit('chat message', { username, message: input.value, profilePic });
+          addMessage(username, input.value, true, profilePic);
+          input.value = '';
+          typing = false;
+          socket.emit('stop typing', username);
+        }
       }
     });
+
+    socket.on('chat message', (data) => {
+      addMessage(data.username, data.message, data.username === username, data.profilePic, data.file, data.fileName, data.fileType);
+    });
+
+    socket.on('user joined', ({ username: newUser, userCount }) => {
+      addNotification(`${newUser} joined the chat`);
+      userCountDisplay.textContent = `Users online: ${userCount}`;
+    });
+
+    socket.on('user left', ({ username: leftUser, userCount }) => {
+      addNotification(`${leftUser} left the chat`);
+      userCountDisplay.textContent = `Users online: ${userCount}`;
+    });
+
+    socket.on('typing', (who) => {
+      if (who !== username) typingIndicator.textContent = `${who} is typing...`;
+    });
+
+    socket.on('stop typing', (who) => {
+      if (who !== username) typingIndicator.textContent = '';
+    });
+
+    function addMessage(sender, text, isYou, profilePic, fileData, fileName, fileType) {
+      const div = document.createElement('div');
+      div.className = 'message' + (isYou ? ' you' : '');
+
+      const pfpImg = document.createElement('img');
+      pfpImg.src = profilePic || 'https://via.placeholder.com/40';
+      pfpImg.alt = sender + ' profile picture';
+      pfpImg.style.width = '40px';
+      pfpImg.style.height = '40px';
+      pfpImg.style.borderRadius = '50%';
+      pfpImg.style.marginRight = '8px';
+      pfpImg.style.verticalAlign = 'middle';
+
+      const contentSpan = document.createElement('span');
+      contentSpan.style.verticalAlign = 'middle';
+
+      // Linkify message text
+      const linkifiedText = linkify(text);
+      contentSpan.innerHTML = linkifiedText;
+
+      div.appendChild(pfpImg);
+      div.appendChild(contentSpan);
+
+      if (fileData) {
+        const fileElement = createFileElement(fileData, fileName, fileType);
+        div.appendChild(fileElement);
+      }
+
+      messages.appendChild(div);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    function addNotification(text) {
+      const div = document.createElement('div');
+      div.className = 'message';
+      div.style.fontStyle = 'italic';
+      div.style.backgroundColor = 'transparent';
+      div.style.boxShadow = 'none';
+      div.textContent = text;
+      messages.appendChild(div);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    function linkify(text) {
+      const urlPattern = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
+      return text.replace(urlPattern, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+    }
+
+    function createFileElement(fileData, fileName, fileType) {
+      let element;
+      if (fileType.startsWith('image/')) {
+        element = document.createElement('img');
+        element.src = fileData;
+        element.alt = fileName;
+        element.style.maxWidth = '200px';
+        element.style.display = 'block';
+        element.style.marginTop = '8px';
+        element.style.borderRadius = 'var(--radius)';
+      } else if (fileType.startsWith('video/')) {
+        element = document.createElement('video');
+        element.src = fileData;
+        element.controls = true;
+        element.style.maxWidth = '200px';
+        element.style.display = 'block';
+        element.style.marginTop = '8px';
+        element.style.borderRadius = 'var(--radius)';
+      } else if (fileType.startsWith('audio/')) {
+        element = document.createElement('audio');
+        element.src = fileData;
+        element.controls = true;
+        element.style.display = 'block';
+        element.style.marginTop = '8px';
+      } else {
+        element = document.createElement('a');
+        element.href = fileData;
+        element.textContent = fileName;
+        element.target = '_blank';
+        element.rel = 'noopener noreferrer';
+        element.style.display = 'block';
+        element.style.marginTop = '8px';
+        element.style.color = 'var(--color-primary)';
+      }
+      return element;
+    }
+  </script>
 
     socket.on('chat message', ({ username: from, message }) => {
       addMessage(from, message, from === username);
