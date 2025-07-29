@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>LycanChat V1</title>
+  <title>LycanChat V3</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     /* Material You Inspired Theme */
@@ -157,6 +157,7 @@
 </head>
 <body>
   <div id="userCount">Users online: 1</div>
+  <button id="logout-button" title="Logout">Logout</button>
   <div id="messages"></div>
   <div id="typingIndicator"></div>
   <form id="form" autocomplete="off">
@@ -309,7 +310,6 @@
           reader.onload = function(e) {
             const fileData = e.target.result;
             socket.emit('chat message', { username, message: input.value, file: fileData, fileName: file.name, fileType: file.type, profilePic });
-            addMessage(username, input.value, true, profilePic, fileData, file.name, file.type);
             input.value = '';
             fileInput.value = '';
             typing = false;
@@ -318,7 +318,6 @@
           reader.readAsDataURL(file);
         } else {
           socket.emit('chat message', { username, message: input.value, profilePic });
-          addMessage(username, input.value, true, profilePic);
           input.value = '';
           typing = false;
           socket.emit('stop typing', username);
@@ -327,6 +326,7 @@
     });
 
     socket.on('chat message', (data) => {
+      // Prevent duplicate message for sender by not adding message locally on submit
       addMessage(data.username, data.message, data.username === username, data.profilePic, data.file, data.fileName, data.fileType);
     });
 
@@ -433,47 +433,16 @@
       return element;
     }
   </script>
-
-    socket.on('chat message', ({ username: from, message }) => {
-      addMessage(from, message, from === username);
+  <script>
+    const logoutButton = document.getElementById('logout-button');
+    logoutButton.addEventListener('click', () => {
+      localStorage.removeItem('username');
+      localStorage.removeItem('profilePic');
+      username = '';
+      profilePic = '';
+      socket.disconnect();
+      location.reload();
     });
-
-    socket.on('user joined', ({ username: newUser, userCount }) => {
-      addNotification(`${newUser} joined the chat`);
-      userCountDisplay.textContent = `Users online: ${userCount}`;
-    });
-
-    socket.on('user left', ({ username: leftUser, userCount }) => {
-      addNotification(`${leftUser} left the chat`);
-      userCountDisplay.textContent = `Users online: ${userCount}`;
-    });
-
-    socket.on('typing', (who) => {
-      if (who !== username) typingIndicator.textContent = `${who} is typing...`;
-    });
-
-    socket.on('stop typing', (who) => {
-      if (who !== username) typingIndicator.textContent = '';
-    });
-
-    function addMessage(sender, text, isYou) {
-      const div = document.createElement('div');
-      div.className = 'message' + (isYou ? ' you' : '');
-      div.textContent = `${sender}: ${text}`;
-      messages.appendChild(div);
-      messages.scrollTop = messages.scrollHeight;
-    }
-
-    function addNotification(text) {
-      const div = document.createElement('div');
-      div.className = 'message';
-      div.style.fontStyle = 'italic';
-      div.style.backgroundColor = 'transparent';
-      div.style.boxShadow = 'none';
-      div.textContent = text;
-      messages.appendChild(div);
-      messages.scrollTop = messages.scrollHeight;
-    }
   </script>
 </body>
 </html>
