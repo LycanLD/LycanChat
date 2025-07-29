@@ -3,11 +3,115 @@
 <head>
   <title>Fly.io Public Room Chat</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; }
-    #messages { flex: 1; overflow-y: scroll; padding: 10px; border-bottom: 1px solid #ccc; }
-    #form { display: flex; padding: 10px; }
-    #input { flex: 1; padding: 10px; font-size: 16px; }
-    #send { padding: 10px 20px; font-size: 16px; }
+    /* Material You inspired CSS */
+    :root {
+      --md-sys-color-primary: #6750A4;
+      --md-sys-color-on-primary: #FFFFFF;
+      --md-sys-color-primary-container: #EADDFF;
+      --md-sys-color-on-primary-container: #21005D;
+      --md-sys-color-secondary: #625B71;
+      --md-sys-color-on-secondary: #FFFFFF;
+      --md-sys-color-secondary-container: #E8DEF8;
+      --md-sys-color-on-secondary-container: #1D192B;
+      --md-sys-color-background: #FFFBFE;
+      --md-sys-color-on-background: #1C1B1F;
+      --md-sys-color-surface: #FFFBFE;
+      --md-sys-color-on-surface: #1C1B1F;
+      --md-sys-color-error: #B3261E;
+      --md-sys-color-on-error: #FFFFFF;
+      --md-sys-shape-corner-radius: 12px;
+      --md-sys-elevation-1: 0px 1px 3px rgba(0,0,0,0.12), 0px 1px 2px rgba(0,0,0,0.24);
+    }
+
+    body {
+      font-family: 'Google Sans', 'Roboto', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      background-color: var(--md-sys-color-background);
+      color: var(--md-sys-color-on-background);
+    }
+
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      background-color: var(--md-sys-color-surface);
+      box-shadow: var(--md-sys-elevation-1);
+      border-radius: var(--md-sys-shape-corner-radius);
+      margin: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    #messages > div {
+      background-color: var(--md-sys-color-primary-container);
+      color: var(--md-sys-color-on-primary-container);
+      padding: 12px 16px;
+      border-radius: var(--md-sys-shape-corner-radius);
+      box-shadow: var(--md-sys-elevation-1);
+      max-width: 70%;
+      word-wrap: break-word;
+      font-weight: 500;
+      font-size: 1rem;
+      align-self: flex-start;
+      transition: background-color 0.3s ease;
+    }
+
+    #form {
+      display: flex;
+      padding: 16px;
+      background-color: var(--md-sys-color-surface);
+      box-shadow: var(--md-sys-elevation-1);
+      border-radius: var(--md-sys-shape-corner-radius);
+      margin: 0 16px 16px 16px;
+      gap: 12px;
+    }
+
+    #input {
+      flex: 1;
+      padding: 14px 16px;
+      font-size: 1rem;
+      border: none;
+      border-radius: var(--md-sys-shape-corner-radius);
+      background-color: var(--md-sys-color-primary-container);
+      color: var(--md-sys-color-on-primary-container);
+      box-shadow: var(--md-sys-elevation-1);
+      outline-offset: 2px;
+      transition: box-shadow 0.3s ease;
+    }
+
+    #input:focus {
+      box-shadow: 0 0 0 3px var(--md-sys-color-primary);
+      background-color: var(--md-sys-color-primary);
+      color: var(--md-sys-color-on-primary);
+    }
+
+    #send {
+      padding: 14px 24px;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--md-sys-color-on-primary);
+      background-color: var(--md-sys-color-primary);
+      border: none;
+      border-radius: var(--md-sys-shape-corner-radius);
+      box-shadow: var(--md-sys-elevation-1);
+      cursor: pointer;
+      transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    #send:hover {
+      background-color: #5a3e9e;
+      box-shadow: 0 4px 8px rgba(103, 80, 164, 0.4);
+    }
+
+    #send:active {
+      background-color: #4b3280;
+      box-shadow: 0 2px 4px rgba(103, 80, 164, 0.6);
+    }
   </style>
 </head>
 <body>
@@ -29,23 +133,95 @@
       }
     }
 
+    // Emit join event after username is set
+    socket.emit('join', username);
+
     const form = document.getElementById('form');
     const input = document.getElementById('input');
     const messages = document.getElementById('messages');
+
+    // Create user count display element
+    const userCountDisplay = document.createElement('div');
+    userCountDisplay.style.padding = '8px 16px';
+    userCountDisplay.style.fontWeight = '600';
+    userCountDisplay.style.color = 'var(--md-sys-color-on-background)';
+    userCountDisplay.style.backgroundColor = 'var(--md-sys-color-secondary-container)';
+    userCountDisplay.style.borderRadius = 'var(--md-sys-shape-corner-radius)';
+    userCountDisplay.style.margin = '0 16px 8px 16px';
+    userCountDisplay.textContent = 'Users online: 1';
+    document.body.insertBefore(userCountDisplay, messages);
+
+    // Typing indicator element
+    const typingIndicator = document.createElement('div');
+    typingIndicator.style.fontStyle = 'italic';
+    typingIndicator.style.color = 'var(--md-sys-color-secondary)';
+    typingIndicator.style.margin = '0 16px 8px 16px';
+    typingIndicator.textContent = '';
+    document.body.insertBefore(typingIndicator, messages.nextSibling);
+
+    let typing = false;
+    let typingTimeout;
+
+    function stopTyping() {
+      typing = false;
+      socket.emit('stop typing', username);
+    }
+
+    input.addEventListener('input', () => {
+      if (!typing) {
+        typing = true;
+        socket.emit('typing', username);
+      }
+      clearTimeout(typingTimeout);
+      typingTimeout = setTimeout(stopTyping, 1000);
+    });
 
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       if (input.value) {
         socket.emit('chat message', { username, message: input.value });
         input.value = '';
+        stopTyping();
       }
     });
+
+    function addNotification(message) {
+      const item = document.createElement('div');
+      item.textContent = message;
+      item.style.fontStyle = 'italic';
+      item.style.color = 'var(--md-sys-color-secondary)';
+      item.style.marginBottom = '8px';
+      messages.appendChild(item);
+      messages.scrollTop = messages.scrollHeight;
+    }
 
     socket.on('chat message', (data) => {
       const item = document.createElement('div');
       item.textContent = data.username + ': ' + data.message;
       messages.appendChild(item);
       messages.scrollTop = messages.scrollHeight;
+    });
+
+    socket.on('user joined', (data) => {
+      addNotification(`${data.username} joined the chat`);
+      userCountDisplay.textContent = `Users online: ${data.userCount}`;
+    });
+
+    socket.on('user left', (data) => {
+      addNotification(`${data.username} left the chat`);
+      userCountDisplay.textContent = `Users online: ${data.userCount}`;
+    });
+
+    socket.on('typing', (typingUser) => {
+      if (typingUser !== username) {
+        typingIndicator.textContent = `${typingUser} is typing...`;
+      }
+    });
+
+    socket.on('stop typing', (typingUser) => {
+      if (typingUser !== username) {
+        typingIndicator.textContent = '';
+      }
     });
   </script>
 </body>
