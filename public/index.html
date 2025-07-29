@@ -455,6 +455,7 @@
     loginPfpInput.type = 'file';
     loginPfpInput.accept = 'image/*';
     loginPfpInput.style.marginBottom = '16px';
+    loginPfpInput.id = 'login-pfp';
     loginScreen.appendChild(loginPfpInput);
 
     const loginButton = document.createElement('button');
@@ -463,7 +464,10 @@
     loginButton.style.cssText = 'padding: 12px 24px; font-size: 1rem; font-weight: 600; color: var(--color-on-primary); background-color: var(--color-primary); border: none; border-radius: var(--radius); box-shadow: var(--elevation); cursor: pointer;';
     loginScreen.appendChild(loginButton);
 
-    document.body.innerHTML = '';
+    document.body.appendChild(loginScreen);
+    document.body.appendChild(chatScreen);
+    loginScreen.style.display = 'flex';
+    chatScreen.style.display = 'none';
     document.body.appendChild(loginScreen);
 
     const chatScreen = document.createElement('div');
@@ -536,23 +540,23 @@
     chatScreen.appendChild(form);
     document.body.appendChild(chatScreen);
 
-    const loginInput = document.getElementById('login-input');
-const loginPfpInput = document.getElementById('login-pfp');
-const loginButton = document.getElementById('login-button');
+const loginInputField = document.getElementById('login-input');
+const loginPfpInputField = document.getElementById('login-pfp');
+const loginButtonElement = document.getElementById('login-button');
 const loginArea = document.getElementById('loginArea');
 
-loginButton.addEventListener('click', () => {
-  const enteredUsername = loginInput.value.trim();
+loginButtonElement.addEventListener('click', () => {
+  const enteredUsername = loginInputField.value.trim();
   if (enteredUsername) {
     username = enteredUsername;
 
-    if (loginPfpInput.files.length > 0) {
+    if (loginPfpInputField.files.length > 0) {
       const reader = new FileReader();
       reader.onload = function (e) {
         profilePic = e.target.result;
         localStorage.setItem('profilePic', profilePic);
       };
-      reader.readAsDataURL(loginPfpInput.files[0]);
+      reader.readAsDataURL(loginPfpInputField.files[0]);
     } else {
       profilePic = localStorage.getItem('profilePic') || '';
     }
@@ -594,30 +598,6 @@ loginButton.addEventListener('click', () => {
         typing = false;
         socket.emit('stop typing', username);
       }, 1000);
-    });
-
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      if (input.value.trim() || fileInput.files.length > 0) {
-        if (fileInput.files.length > 0) {
-          const file = fileInput.files[0];
-          const reader = new FileReader();
-          reader.onload = function(e) {
-            const fileData = e.target.result;
-            socket.emit('chat message', { username, message: input.value, file: fileData, fileName: file.name, fileType: file.type, profilePic });
-            input.value = '';
-            fileInput.value = '';
-            typing = false;
-            socket.emit('stop typing', username);
-          };
-          reader.readAsDataURL(file);
-        } else {
-          socket.emit('chat message', { username, message: input.value, profilePic });
-          input.value = '';
-          typing = false;
-          socket.emit('stop typing', username);
-        }
-      }
     });
 
     socket.on('chat message', (data) => {
@@ -727,6 +707,9 @@ loginButton.addEventListener('click', () => {
       }
       return element;
     }
+    document.getElementById('fileUploadButton').addEventListener('click', () => {
+      document.getElementById('fileInput').click();
+      });
   </script>
   <script>
     // Removed duplicate declaration of logoutButton and fileInput event listeners
