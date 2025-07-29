@@ -169,17 +169,79 @@
     const socket = io();
     let username = '';
 
-    while (!username) {
-      username = prompt('Enter your username:')?.trim();
-    }
+    const loginScreen = document.createElement('div');
+    loginScreen.id = 'login-screen';
+    loginScreen.style.cssText = 'display:flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background-color: var(--color-background); color: var(--color-on-background);';
 
-    socket.emit('join', username);
+    const loginTitle = document.createElement('h2');
+    loginTitle.textContent = 'Enter your username';
+    loginScreen.appendChild(loginTitle);
 
-    const form = document.getElementById('form');
-    const input = document.getElementById('input');
-    const messages = document.getElementById('messages');
-    const userCountDisplay = document.getElementById('userCount');
-    const typingIndicator = document.getElementById('typingIndicator');
+    const loginInput = document.createElement('input');
+    loginInput.id = 'login-input';
+    loginInput.type = 'text';
+    loginInput.placeholder = 'Username';
+    loginInput.style.cssText = 'padding: 12px 16px; font-size: 1rem; border-radius: var(--radius); border: none; box-shadow: var(--elevation); outline-offset: 2px; margin-bottom: 16px; width: 250px;';
+    loginScreen.appendChild(loginInput);
+
+    const loginButton = document.createElement('button');
+    loginButton.id = 'login-button';
+    loginButton.textContent = 'Join Chat';
+    loginButton.style.cssText = 'padding: 12px 24px; font-size: 1rem; font-weight: 600; color: var(--color-on-primary); background-color: var(--color-primary); border: none; border-radius: var(--radius); box-shadow: var(--elevation); cursor: pointer;';
+    loginScreen.appendChild(loginButton);
+
+    document.body.innerHTML = '';
+    document.body.appendChild(loginScreen);
+
+    const chatScreen = document.createElement('div');
+    chatScreen.id = 'chat-screen';
+    chatScreen.style.cssText = 'display:none; flex-direction: column; height: 100vh;';
+
+    const userCountDisplay = document.createElement('div');
+    userCountDisplay.id = 'userCount';
+    userCountDisplay.textContent = 'Users online: 1';
+    userCountDisplay.style.cssText = 'padding: 12px 16px; font-weight: 600; background-color: var(--color-secondary-container); color: var(--color-on-secondary-container); border-radius: var(--radius); margin: 16px; box-shadow: var(--elevation);';
+    chatScreen.appendChild(userCountDisplay);
+
+    const messages = document.createElement('div');
+    messages.id = 'messages';
+    messages.style.cssText = 'flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 0 16px; margin-bottom: 16px;';
+    chatScreen.appendChild(messages);
+
+    const typingIndicator = document.createElement('div');
+    typingIndicator.id = 'typingIndicator';
+    typingIndicator.style.cssText = 'font-style: italic; color: var(--color-on-surface); padding: 0 16px; margin-bottom: 8px;';
+    chatScreen.appendChild(typingIndicator);
+
+    const form = document.createElement('form');
+    form.id = 'form';
+    form.autocomplete = 'off';
+    form.style.cssText = 'display: flex; gap: 12px; padding: 16px; background-color: var(--color-surface); box-shadow: var(--elevation); border-top: 1px solid #ccc;';
+
+    const input = document.createElement('input');
+    input.id = 'input';
+    input.placeholder = 'Type a message...';
+    input.style.cssText = 'flex: 1; padding: 14px 16px; font-size: 1rem; border: none; border-radius: var(--radius); background-color: var(--color-primary-container); color: var(--color-on-primary-container); box-shadow: var(--elevation); transition: box-shadow 0.3s, background-color 0.3s;';
+    form.appendChild(input);
+
+    const sendButton = document.createElement('button');
+    sendButton.id = 'send';
+    sendButton.textContent = 'Send';
+    sendButton.style.cssText = 'padding: 14px 24px; font-size: 1rem; font-weight: 600; border: none; border-radius: var(--radius); background-color: var(--color-primary); color: var(--color-on-primary); cursor: pointer; transition: background-color 0.3s, box-shadow 0.3s;';
+    form.appendChild(sendButton);
+
+    chatScreen.appendChild(form);
+    document.body.appendChild(chatScreen);
+
+    loginButton.addEventListener('click', () => {
+      const enteredUsername = loginInput.value.trim();
+      if (enteredUsername) {
+        username = enteredUsername;
+        loginScreen.style.display = 'none';
+        chatScreen.style.display = 'flex';
+        socket.emit('join', username);
+      }
+    });
 
     let typing = false;
     let typingTimeout;
@@ -200,7 +262,6 @@
       e.preventDefault();
       if (input.value.trim()) {
         socket.emit('chat message', { username, message: input.value });
-        addMessage(username, input.value, true);
         input.value = '';
         typing = false;
         socket.emit('stop typing', username);
