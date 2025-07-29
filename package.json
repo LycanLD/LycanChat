@@ -1,10 +1,13 @@
 {
-  "name": "create-user-app-monorepo",
-  "private": true,
-  "devDependencies": {
-    "@types/bun": "latest"
-  },
+  "name": "flyio-chat-app",
+  "version": "1.0.0",
+  "description": "A Fly.io public room chat app using socket.io",
+  "main": "server.js",
   "scripts": {
-    "dev": "bun --filter=web dev"
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2"
   }
 }

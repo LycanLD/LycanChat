@@ -1,17 +1,20 @@
-FROM node:20-slim
-ENV CI=false
-ENV VITE_DEV_CACHE=.vite/deps
-WORKDIR /home/user
+# Use official Node.js LTS image
+FROM node:18-alpine
 
-RUN npm install -g bun
+# Create app directory
+WORKDIR /app
 
-COPY --link apps ./apps
-COPY --link bun.lock package.json ./
+# Copy package.json and package-lock.json
+COPY package*.json ./
 
-WORKDIR /home/user/apps/web
-RUN bun install --frozen-lockfile
+# Install dependencies
+RUN npm install --production
 
-WORKDIR /home/user/apps/mobile  
-RUN bun install --frozen-lockfile
+# Copy app source code
+COPY . .
 
-WORKDIR /home/user
+# Expose port
+EXPOSE 3000
+
+# Start the app
+CMD ["npm", "start"]
