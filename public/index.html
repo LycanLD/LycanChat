@@ -409,11 +409,13 @@
     });
 
     // Update socket listener to handle multiple files
+    // Removed duplicate socket.on('chat message') handler
+
     socket.on('chat message', (data) => {
-      // Prevent duplicate message for sender by not adding message locally on submit
       if (data.files && Array.isArray(data.files)) {
-        data.files.forEach(file => {
-          addMessage(data.username, data.message, data.username === username, data.profilePic, file.fileData, file.fileName, file.fileType);
+        addMessage(data.username, data.message, data.username === username, data.profilePic);
+        data.files.forEach((file) => {
+          addMessage(data.username, '', data.username === username, data.profilePic, file.fileData, file.fileName, file.fileType);
         });
       } else {
         addMessage(data.username, data.message, data.username === username, data.profilePic, data.file, data.fileName, data.fileType);
@@ -464,15 +466,14 @@
     loginButton.style.cssText = 'padding: 12px 24px; font-size: 1rem; font-weight: 600; color: var(--color-on-primary); background-color: var(--color-primary); border: none; border-radius: var(--radius); box-shadow: var(--elevation); cursor: pointer;';
     loginScreen.appendChild(loginButton);
 
-    document.body.appendChild(loginScreen);
-    document.body.appendChild(chatScreen);
     loginScreen.style.display = 'flex';
     chatScreen.style.display = 'none';
 
     const chatScreen = document.createElement('div');
     chatScreen.id = 'chat-screen';
     chatScreen.style.cssText = 'display:none; flex-direction: column; height: 100vh;';
-
+    document.body.appendChild(loginScreen);
+    document.body.appendChild(chatScreen);
     const topBar = document.createElement('div');
     topBar.id = 'topBar';
     topBar.style.cssText = 'display: flex; align-items: center; justify-content: space-between; margin: 16px;';
