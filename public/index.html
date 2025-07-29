@@ -1,517 +1,167 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>LycanChat V4</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <title>LycanChat Simple</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    /* Material You Inspired Theme */
-    :root {
-      --color-primary: #FF6F00; /* Orange primary */
-      --color-on-primary: #FFFFFF;
-      --color-primary-container: #FFE0B2;
-      --color-on-primary-container: #3E2723;
-
-      --color-secondary: #FF8F00;
-      --color-on-secondary: #FFFFFF;
-      --color-secondary-container: #FFECB3;
-      --color-on-secondary-container: #4E342E;
-
-      --color-tertiary-container: #FFD8E4;
-      --color-on-tertiary-container: #370B1E;
-
-      --color-background: #FFF3E0;
-      --color-on-background: #3E2723;
-
-      --color-surface: #FFFFFF;
-      --color-on-surface: #3E2723;
-
-      --color-surface-variant: #FFE0B2;
-      --color-on-surface-variant: #4E342E;
-
-      --color-outline: #FF6F00;
-
-      --color-orange: #FF6F00;
-      --color-on-orange: #FFFFFF;
-      --color-orange-container: #FFE0B2;
-      --color-on-orange-container: #3E2723;
-
-      --radius: 12px;
-      --elevation: 0 1px 3px rgba(255, 111, 0, 0.3), 0 1px 2px rgba(255, 111, 0, 0.2);
-}
-
-    * {
-      box-sizing: border-box;
-    }
-
     body {
+      font-family: Arial, sans-serif;
       margin: 0;
-      font-family: 'Roboto', sans-serif;
-      background-color: var(--color-background);
-      color: var(--color-on-background);
+      padding: 0;
+      background-color: #f0f0f0;
+      color: #333;
       display: flex;
       flex-direction: column;
       height: 100vh;
     }
-
-    #userCount {
-      padding: 12px 16px;
-      font-weight: 600;
-      background-color: var(--color-secondary-container);
-      color: var(--color-on-secondary-container);
-      border-radius: var(--radius);
-      margin: 0;
-      box-shadow: var(--elevation);
-      flex: 1;
-    }
-
     #topBar {
+      background-color: #007bff;
+      color: white;
+      padding: 10px 20px;
       display: flex;
-      align-items: center;
       justify-content: space-between;
-      margin: 0 16px;
-      padding: 8px 16px;
-      background-color: var(--color-primary-container);
-      border-radius: var(--radius);
-      box-shadow: var(--elevation);
-    }
-
-    #logout-container {
-      display: flex;
       align-items: center;
-      margin-left: 16px;
     }
-
-    #logout-button {
-      background-color: var(--color-primary);
-      color: var(--color-on-primary);
-      border: none;
-      border-radius: var(--radius);
-      padding: 8px 16px;
-      font-weight: 600;
-      cursor: pointer;
-      box-shadow: var(--elevation);
-      transition: background-color 0.3s ease;
-      position: relative;
+    #userCount {
+      font-weight: bold;
     }
-
-    #logout-button:hover {
-      background-color: #ff8f00;
-    }
-
-    #logout-button:active {
-      background-color: #e67c00;
-      box-shadow: 0 2px 4px rgba(255, 143, 0, 0.6);
-    }
-
-    #logout-button .notification-badge {
-      position: absolute;
-      top: 4px;
-      right: 4px;
-      width: 12px;
-      height: 12px;
-      background-color: var(--color-primary);
-      border-radius: 50%;
-      display: none;
-    }
-
-    #logout-button .notification-badge.active {
-      display: block;
-    }
-
-    /* File upload button as plus icon */
-    #file-upload-label {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      background-color: var(--color-primary);
-      color: var(--color-on-primary);
-      border-radius: 50%;
-      width: 36px;
-      height: 36px;
-      font-weight: 600;
-      cursor: pointer;
-      user-select: none;
-      transition: background-color 0.3s ease;
-      box-shadow: var(--elevation);
-      font-size: 24px;
-      line-height: 1;
-      margin-top: 6px;
-    }
-
-    #file-upload-label:hover {
-      background-color: #5a3e9e;
-    }
-
-    #file-upload-label:active {
-      background-color: #4b3280;
-      box-shadow: 0 2px 4px rgba(103, 80, 164, 0.6);
-    }
-
-    /* Hide the actual file input */
-    input[type="file"] {
-      display: none;
-    }
-
     #messages {
       flex: 1;
       overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      padding: 0 16px;
-      margin-bottom: 16px;
+      padding: 10px 20px;
+      background-color: white;
     }
-
     .message {
+      margin-bottom: 10px;
+      padding: 8px 12px;
+      border-radius: 4px;
+      background-color: #e9ecef;
       max-width: 70%;
-      padding: 12px 16px;
-      border-radius: var(--radius);
-      background-color: var(--color-primary-container);
-      color: var(--color-on-primary-container);
-      box-shadow: var(--elevation);
-      font-size: 1rem;
-      font-weight: 500;
-      align-self: flex-start;
-      transition: background-color 0.3s;
     }
-
     .message.you {
-      align-self: flex-end;
-      background-color: var(--color-primary);
-      color: var(--color-on-primary);
+      background-color: #007bff;
+      color: white;
+      margin-left: auto;
     }
-
     #typingIndicator {
       font-style: italic;
-      color: var(--color-on-surface);
-      padding: 0 16px;
-      margin-bottom: 8px;
+      padding: 5px 20px;
+      color: #666;
+      height: 20px;
     }
-
     #form {
       display: flex;
-      gap: 12px;
-      padding: 16px;
-      background-color: var(--color-surface);
-      box-shadow: var(--elevation);
+      padding: 10px 20px;
+      background-color: white;
       border-top: 1px solid #ccc;
     }
-
     #input {
       flex: 1;
-      padding: 14px 16px;
+      padding: 8px 12px;
       font-size: 1rem;
-      border: none;
-      border-radius: var(--radius);
-      background-color: var(--color-primary-container);
-      color: var(--color-on-primary-container);
-      box-shadow: var(--elevation);
-      transition: box-shadow 0.3s, background-color 0.3s;
+      border: 1px solid #ccc;
+      border-radius: 4px;
     }
-
-    #input:focus {
-      outline: none;
-      background-color: var(--color-primary);
-      color: var(--color-on-primary);
-      box-shadow: 0 0 0 3px rgba(103, 80, 164, 0.3);
-    }
-
     #send {
-      padding: 14px 24px;
+      padding: 8px 16px;
+      margin-left: 10px;
       font-size: 1rem;
-      font-weight: 600;
+      background-color: #007bff;
+      color: white;
       border: none;
-      border-radius: var(--radius);
-      background-color: var(--color-primary);
-      color: var(--color-on-primary);
+      border-radius: 4px;
       cursor: pointer;
-      transition: background-color 0.3s, box-shadow 0.3s;
     }
-
-    #send:hover {
-      background-color: #5a3e9e;
+    #send:disabled {
+      background-color: #6c757d;
+      cursor: not-allowed;
     }
-
-    #send:active {
-      background-color: #4b3280;
-      box-shadow: 0 2px 4px rgba(103, 80, 164, 0.6);
+    #login-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background-color: #f0f0f0;
+      color: #333;
     }
-
-    @media (max-width: 600px) {
-      #form {
-        flex-direction: column;
-      }
-
-      #send {
-        width: 100%;
-      }
+    #login-screen input {
+      padding: 8px 12px;
+      font-size: 1rem;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      width: 250px;
+    }
+    #login-screen button {
+      padding: 8px 16px;
+      font-size: 1rem;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <div id="topBar">
-  <div id="userCount">Users online: 1</div>
-  <div id="logout-container">
-    <button id="logout-button" title="Logout">Logout</button>
+  <div id="login-screen">
+    <h2>Enter your username</h2>
+    <input id="login-input" type="text" placeholder="Username" />
+    <button id="login-button">Join Chat</button>
   </div>
-</div>
 
-  <div id="messages"></div>
-  <div id="typingIndicator"></div>
-  <div id="filePreviewBar" style="display: flex; gap: 8px; padding: 8px 16px; overflow-x: auto; background-color: var(--color-surface-variant); border-top: 1px solid var(--color-outline);">
-    <!-- Previews of selected files will appear here -->
+  <div id="chat-screen" style="display:none; flex-direction: column; height: 100vh;">
+    <div id="topBar">
+      <div id="userCount">Users online: 0</div>
+    </div>
+    <div id="messages"></div>
+    <div id="typingIndicator"></div>
+    <form id="form" autocomplete="off">
+      <input id="input" placeholder="Type a message..." />
+      <button id="send" type="submit" disabled>Send</button>
+    </form>
   </div>
-  <form id="form" autocomplete="off" style="display: flex; gap: 12px; padding: 16px; background-color: var(--color-surface); box-shadow: var(--elevation); border-top: 1px solid #ccc;">
-    <input id="input" placeholder="Type a message..." style="flex: 1; padding: 14px 16px; font-size: 1rem; border: none; border-radius: var(--radius); background-color: var(--color-primary-container); color: var(--color-on-primary-container); box-shadow: var(--elevation); transition: box-shadow 0.3s, background-color 0.3s;" />
-  <input type="file" id="fileInput" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt" style="display: none;" multiple />
-  <button type="button" id="fileUploadButton" title="Upload file" style="background-color: var(--color-primary); color: var(--color-on-primary); border: none; border-radius: var(--radius); width: 40px; height: 40px; font-size: 24px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; box-shadow: var(--elevation); transition: background-color 0.3s;">
-      +
-  </button>
-    <button id="send" style="padding: 14px 24px; font-size: 1rem; font-weight: 600; border: none; border-radius: var(--radius); background-color: var(--color-primary); color: var(--color-on-primary); cursor: pointer; transition: background-color 0.3s, box-shadow 0.3s;">Send</button>
-  </form>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
     let username = '';
-    let profilePic = '';
 
-    const fileInput = document.getElementById('fileInput');
-    const filePreviewBar = document.getElementById('filePreviewBar');
-    let selectedFiles = [];
-
-    // Update file input change to handle multiple files and show previews
-    fileInput.addEventListener('change', () => {
-      for (const file of fileInput.files) {
-        selectedFiles.push(file);
-      }
-      renderFilePreviews();
-      fileInput.value = ''; // Reset input to allow re-selecting same files
-    });
-
-    // Render previews of selected files in the preview bar
-    function renderFilePreviews() {
-      filePreviewBar.innerHTML = '';
-      selectedFiles.forEach((file, index) => {
-        const previewElement = createPreviewElement(file, index);
-        filePreviewBar.appendChild(previewElement);
-      });
-    }
-
-    // Create preview element for a file with remove button
-    function createPreviewElement(file, index) {
-      const container = document.createElement('div');
-      container.style.position = 'relative';
-      container.style.display = 'inline-block';
-      container.style.borderRadius = 'var(--radius)';
-      container.style.overflow = 'hidden';
-      container.style.width = '80px';
-      container.style.height = '80px';
-      container.style.flex = '0 0 auto';
-      container.style.boxShadow = 'var(--elevation)';
-      container.style.backgroundColor = 'var(--color-surface)';
-
-      const removeBtn = document.createElement('button');
-      removeBtn.textContent = '×';
-      removeBtn.style.position = 'absolute';
-      removeBtn.style.top = '2px';
-      removeBtn.style.right = '2px';
-      removeBtn.style.background = 'rgba(0,0,0,0.5)';
-      removeBtn.style.color = 'white';
-      removeBtn.style.border = 'none';
-      removeBtn.style.borderRadius = '50%';
-      removeBtn.style.width = '20px';
-      removeBtn.style.height = '20px';
-      removeBtn.style.cursor = 'pointer';
-      removeBtn.style.zIndex = '10';
-      removeBtn.title = 'Remove file';
-      removeBtn.addEventListener('click', () => {
-        selectedFiles.splice(index, 1);
-        renderFilePreviews();
-      });
-
-      container.appendChild(removeBtn);
-
-      if (file.type.startsWith('image/')) {
-        const img = document.createElement('img');
-        img.src = URL.createObjectURL(file);
-        img.style.width = '100%';
-        img.style.height = '100%';
-        img.style.objectFit = 'cover';
-        container.appendChild(img);
-      } else if (file.type.startsWith('video/')) {
-        const video = document.createElement('video');
-        video.src = URL.createObjectURL(file);
-        video.controls = true;
-        video.style.width = '100%';
-        video.style.height = '100%';
-        container.appendChild(video);
-      } else if (file.type.startsWith('audio/')) {
-        const audio = document.createElement('audio');
-        audio.src = URL.createObjectURL(file);
-        audio.controls = true;
-        audio.style.width = '100%';
-        container.appendChild(audio);
-      } else {
-        const icon = document.createElement('div');
-        icon.textContent = file.name;
-        icon.style.padding = '8px';
-        icon.style.fontSize = '0.75rem';
-        icon.style.overflow = 'hidden';
-        icon.style.textOverflow = 'ellipsis';
-        icon.style.whiteSpace = 'nowrap';
-        container.appendChild(icon);
-      }
-
-      return container;
-    }
-
-    // Modify form submission to send all selected files
-    const form = document.getElementById('form');
+    const loginScreen = document.getElementById('login-screen');
+    const chatScreen = document.getElementById('chat-screen');
+    const loginInput = document.getElementById('login-input');
+    const loginButton = document.getElementById('login-button');
     const input = document.getElementById('input');
+    const sendButton = document.getElementById('send');
+    const messages = document.getElementById('messages');
+    const userCount = document.getElementById('userCount');
+    const typingIndicator = document.getElementById('typingIndicator');
 
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      if (input.value.trim() || selectedFiles.length > 0) {
-        if (selectedFiles.length > 0) {
-          // Read all files as data URLs and send with message
-          const fileReaders = [];
-          const filesData = [];
-          let filesRead = 0;
-
-          selectedFiles.forEach((file, idx) => {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-              filesData[idx] = {
-                fileData: e.target.result,
-                fileName: file.name,
-                fileType: file.type
-              };
-              filesRead++;
-              if (filesRead === selectedFiles.length) {
-                socket.emit('chat message', { username, message: input.value, files: filesData, profilePic });
-                input.value = '';
-                selectedFiles = [];
-                renderFilePreviews();
-                socket.emit('stop typing', username);
-              }
-            };
-            reader.readAsDataURL(file);
-            fileReaders.push(reader);
-          });
-        } else {
-          socket.emit('chat message', { username, message: input.value, profilePic });
-          input.value = '';
-          socket.emit('stop typing', username);
-        }
-      }
-    });
-
-    // Update socket listener to handle multiple files
-    // Removed duplicate socket.on('chat message') handler
-
-    socket.on('chat message', (data) => {
-      if (data.files && Array.isArray(data.files)) {
-        addMessage(data.username, data.message, data.username === username, data.profilePic);
-        data.files.forEach((file) => {
-          addMessage(data.username, '', data.username === username, data.profilePic, file.fileData, file.fileName, file.fileType);
-        });
-      } else {
-        addMessage(data.username, data.message, data.username === username, data.profilePic, data.file, data.fileName, data.fileType);
-      }
-    });
-
-    // Logout button functionality (already implemented)
-    const logoutButton = document.getElementById('logout-button');
-    logoutButton.addEventListener('click', () => {
-      localStorage.removeItem('username');
-      localStorage.removeItem('profilePic');
-      username = '';
-      profilePic = '';
-      socket.disconnect();
-      setTimeout(() => {
-        location.reload();
-      }, 100);
-      updateInputState();
-    });
-
-    // Removed duplicate declaration of loginScreen and chatScreen elements
-
-const loginInputField = document.getElementById('login-input');
-const loginPfpInputField = document.getElementById('login-pfp');
-const loginButtonElement = document.getElementById('login-button');
-const loginArea = document.getElementById('loginArea');
-
-loginButtonElement.addEventListener('click', () => {
-  const enteredUsername = loginInputField.value.trim();
-  if (enteredUsername) {
-    username = enteredUsername;
-
-    if (loginPfpInputField.files.length > 0) {
-      const reader = new FileReader();
-      reader.onload = function (e) {
-        profilePic = e.target.result;
-        localStorage.setItem('profilePic', profilePic);
-      };
-      reader.readAsDataURL(loginPfpInputField.files[0]);
-    } else {
-      profilePic = localStorage.getItem('profilePic') || '';
-    }
-
-    localStorage.setItem('username', username);
-    loginScreen.style.display = 'none';
-    chatScreen.style.display = 'flex';
-    socket.emit('join', username);
-  }
-});
-
-
-    // Load saved username and profilePic from localStorage
-    window.addEventListener('load', () => {
-      const savedUsername = localStorage.getItem('username');
-      const savedProfilePic = localStorage.getItem('profilePic');
-      if (savedUsername && savedUsername.trim() !== '') {
-        username = savedUsername;
-        profilePic = savedProfilePic || '';
+    loginButton.addEventListener('click', () => {
+      const enteredUsername = loginInput.value.trim();
+      if (enteredUsername) {
+        username = enteredUsername;
         loginScreen.style.display = 'none';
         chatScreen.style.display = 'flex';
+        sendButton.disabled = false;
         socket.emit('join', username);
-      } else {
-        loginScreen.style.display = 'flex';
-        chatScreen.style.display = 'none';
       }
-      updateInputState();
     });
 
-    let typing = false;
-    let typingTimeout;
+    socket.on('user joined', ({ username: newUser, userCount: count }) => {
+      addNotification(`${newUser} joined the chat`);
+      userCount.textContent = `Users online: ${count}`;
+    });
 
-    input.addEventListener('input', () => {
-      if (!typing) {
-        typing = true;
-        socket.emit('typing', username);
-      }
-      clearTimeout(typingTimeout);
-      typingTimeout = setTimeout(() => {
-        typing = false;
-        socket.emit('stop typing', username);
-      }, 1000);
+    socket.on('user left', ({ username: leftUser, userCount: count }) => {
+      addNotification(`${leftUser} left the chat`);
+      userCount.textContent = `Users online: ${count}`;
     });
 
     socket.on('chat message', (data) => {
-      // Prevent duplicate message for sender by not adding message locally on submit
-      addMessage(data.username, data.message, data.username === username, data.profilePic, data.file, data.fileName, data.fileType);
-    });
-
-    socket.on('user joined', ({ username: newUser, userCount }) => {
-      addNotification(`${newUser} joined the chat`);
-      userCountDisplay.textContent = `Users online: ${userCount}`;
-    });
-
-    socket.on('user left', ({ username: leftUser, userCount }) => {
-      addNotification(`${leftUser} left the chat`);
-      userCountDisplay.textContent = `Users online: ${userCount}`;
+      addMessage(data.username, data.message, data.username === username);
     });
 
     socket.on('typing', (who) => {
@@ -522,41 +172,27 @@ loginButtonElement.addEventListener('click', () => {
       if (who !== username) typingIndicator.textContent = '';
     });
 
-    function updateInputState() {
-      const isLoggedIn = username && username.trim() !== '';
-      input.disabled = !isLoggedIn;
-      document.getElementById('send').disabled = !isLoggedIn;
-      document.getElementById('fileUploadButton').disabled = !isLoggedIn;
-    }
+    input.addEventListener('input', () => {
+      socket.emit('typing', username);
+      clearTimeout(window.typingTimeout);
+      window.typingTimeout = setTimeout(() => {
+        socket.emit('stop typing', username);
+      }, 1000);
+    });
 
-    function addMessage(sender, text, isYou, profilePic, fileData, fileName, fileType) {
+    document.getElementById('form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (input.value.trim()) {
+        socket.emit('chat message', { username, message: input.value });
+        input.value = '';
+        socket.emit('stop typing', username);
+      }
+    });
+
+    function addMessage(sender, text, isYou) {
       const div = document.createElement('div');
       div.className = 'message' + (isYou ? ' you' : '');
-
-      const pfpImg = document.createElement('img');
-      pfpImg.src = profilePic || 'https://via.placeholder.com/40';
-      pfpImg.alt = sender + ' profile picture';
-      pfpImg.style.width = '40px';
-      pfpImg.style.height = '40px';
-      pfpImg.style.borderRadius = '50%';
-      pfpImg.style.marginRight = '8px';
-      pfpImg.style.verticalAlign = 'middle';
-
-      const contentSpan = document.createElement('span');
-      contentSpan.style.verticalAlign = 'middle';
-
-      // Linkify message text
-      const linkifiedText = linkify(text);
-      contentSpan.innerHTML = linkifiedText;
-
-      div.appendChild(pfpImg);
-      div.appendChild(contentSpan);
-
-      if (fileData) {
-        const fileElement = createFileElement(fileData, fileName, fileType);
-        div.appendChild(fileElement);
-      }
-
+      div.textContent = `${sender}: ${text}`;
       messages.appendChild(div);
       messages.scrollTop = messages.scrollHeight;
     }
@@ -571,87 +207,6 @@ loginButtonElement.addEventListener('click', () => {
       messages.appendChild(div);
       messages.scrollTop = messages.scrollHeight;
     }
-
-    function linkify(text) {
-      const urlPattern = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
-      return text.replace(urlPattern, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
-    }
-
-    function createFileElement(fileData, fileName, fileType) {
-      let element;
-      if (fileType.startsWith('image/')) {
-        element = document.createElement('img');
-        element.src = fileData;
-        element.alt = fileName;
-        element.style.maxWidth = '200px';
-        element.style.display = 'block';
-        element.style.marginTop = '8px';
-        element.style.borderRadius = 'var(--radius)';
-      } else if (fileType.startsWith('video/')) {
-        element = document.createElement('video');
-        element.src = fileData;
-        element.controls = true;
-        element.style.maxWidth = '200px';
-        element.style.display = 'block';
-        element.style.marginTop = '8px';
-        element.style.borderRadius = 'var(--radius)';
-      } else if (fileType.startsWith('audio/')) {
-        element = document.createElement('audio');
-        element.src = fileData;
-        element.controls = true;
-        element.style.display = 'block';
-        element.style.marginTop = '8px';
-      } else {
-        element = document.createElement('a');
-        element.href = fileData;
-        element.textContent = fileName;
-        element.target = '_blank';
-        element.rel = 'noopener noreferrer';
-        element.style.display = 'block';
-        element.style.marginTop = '8px';
-        element.style.color = 'var(--color-primary)';
-      }
-      return element;
-    }
-    document.getElementById('fileUploadButton').addEventListener('click', () => {
-      document.getElementById('fileInput').click();
-    });
-
-    // Update input state on login and logout
-    logoutButton.addEventListener('click', () => {
-      localStorage.removeItem('username');
-      localStorage.removeItem('profilePic');
-      username = '';
-      profilePic = '';
-      socket.disconnect();
-      setTimeout(() => {
-        location.reload();
-      }, 100);
-      updateInputState();
-    });
-
-    loginButtonElement.addEventListener('click', () => {
-      const enteredUsername = loginInputField.value.trim();
-      if (enteredUsername) {
-        username = enteredUsername;
-
-        if (loginPfpInputField.files.length > 0) {
-          const reader = new FileReader();
-          reader.onload = function (e) {
-            profilePic = e.target.result;
-            localStorage.setItem('profilePic', profilePic);
-          };
-          reader.readAsDataURL(loginPfpInputField.files[0]);
-        } else {
-          profilePic = localStorage.getItem('profilePic') || '';
-        }
-
-        localStorage.setItem('username', username);
-        loginScreen.style.display = 'none';
-        chatScreen.style.display = 'flex';
-        socket.emit('join', username);
-        updateInputState();
-      }
-    });
-</script>
+  </script>
+</body>
 </html>
