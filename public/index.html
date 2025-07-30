@@ -340,14 +340,24 @@
 
     document.getElementById('form').addEventListener('submit', (e) => {
       e.preventDefault();
-      if (input.value.trim() || selectedFiles.length > 0) {
-        socket.emit('chat message', { username, message: input.value, files: selectedFiles });
-        input.value = '';
-        selectedFiles = [];
-        renderPreviewBar();
-        socket.emit('stop typing', username);
-      }
+
+      const hasText = input.value.trim().length > 0;
+      const hasFiles = selectedFiles.length > 0;
+
+      if (!hasText && !hasFiles) return; // Don't send if both are empty
+
+      socket.emit('chat message', {
+        username,
+        message: input.value,
+        files: selectedFiles
+      });
+
+      input.value = '';
+      selectedFiles = [];
+      renderPreviewBar();
+      socket.emit('stop typing', username);
     });
+
 
     function addMessage(sender, text, isYou) {
       const div = document.createElement('div');
