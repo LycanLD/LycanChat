@@ -6,26 +6,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     :root {
-      --primary-color: #007bff;
-      --background-color: #f0f0f0;
+      --primary-color: #ff6600;
+      --background-color: #fff8f0;
       --chat-bg: #ffffff;
       --text-color: #333;
-      --message-bg: #e9ecef;
-      --you-bg: #007bff;
+      --message-bg: #ffe6cc;
+      --you-bg: #ff6600;
       --you-text: #ffffff;
-      --topbar-bg: #007bff;
+      --topbar-bg: #ff6600;
       --topbar-text: #ffffff;
     }
 
     body.dark {
-      --primary-color: #90caf9;
-      --background-color: #121212;
-      --chat-bg: #1e1e1e;
-      --text-color: #f0f0f0;
-      --message-bg: #2a2a2a;
-      --you-bg: #2196f3;
+      --primary-color: #ffb366;
+      --background-color: #2a1a00;
+      --chat-bg: #3d2600;
+      --text-color: #fff8f0;
+      --message-bg: #4d3300;
+      --you-bg: #ff9933;
       --you-text: #ffffff;
-      --topbar-bg: #1f1f1f;
+      --topbar-bg: #4d3300;
       --topbar-text: #ffffff;
     }
 
@@ -349,7 +349,8 @@
       socket.emit('chat message', {
         username,
         message: input.value,
-        files: selectedFiles
+        files: selectedFiles,
+        timestamp: Date.now()
       });
 
       input.value = '';
@@ -367,22 +368,28 @@
     });
 
 
-    function addMessage(sender, text, isYou) {
+    function addMessage(sender, text, isYou, timestamp) {
       const div = document.createElement('div');
       div.className = 'message' + (isYou ? ' you' : '');
+      div.title = new Date(timestamp).toLocaleString();
+
       const name = document.createElement('span');
       name.textContent = `${sender}: `;
       const msg = document.createElement('span');
-      msg.textContent = text;
+      msg.innerHTML = autolink(text);
       div.appendChild(name);
       div.appendChild(msg);
+
+      addReactionsUI(div);
+
       messages.appendChild(div);
       messages.scrollTop = messages.scrollHeight;
     }
 
-    function addMessageWithFiles(sender, text, files, isYou) {
+    function addMessageWithFiles(sender, text, files, isYou, timestamp) {
       const div = document.createElement('div');
       div.className = 'message' + (isYou ? ' you' : '');
+      div.title = new Date(timestamp).toLocaleString();
 
       const senderSpan = document.createElement('span');
       senderSpan.textContent = `${sender}: `;
@@ -390,7 +397,7 @@
       div.appendChild(senderSpan);
 
       const textSpan = document.createElement('span');
-      textSpan.textContent = text ? text : '';
+      textSpan.innerHTML = autolink(text ? text : '');
       div.appendChild(textSpan);
 
       files.forEach(file => {
@@ -412,6 +419,8 @@
         }
       });
 
+      addReactionsUI(div);
+
       messages.appendChild(div);
       messages.scrollTop = messages.scrollHeight;
     }
@@ -432,6 +441,69 @@
       document.body.classList.toggle('dark');
       localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
     });
+    function autolink(text) {
+      const urlRegex = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
+      return text.replace(urlRegex, function(url) {
+        return '<a href="' + url + '" target="_blank" rel="noopener noreferrer">' + url + '</a>';
+      });
+    }
+
+    function addReactionsUI(messageDiv) {
+      const reactions = ['👍', '😂', '❤️', '😮', '😢', '👏'];
+      const reactionCounts = {};
+      const reactionContainer = document.createElement('div');
+      reactionContainer.style.display = 'none';
+      reactionContainer.style.marginTop = '5px';
+      reactionContainer.style.gap = '5px';
+      reactionContainer.style.cursor = 'pointer';
+      reactionContainer.style.userSelect = 'none';
+      reactionContainer.style.fontSize = '1.2rem';
+      reactionContainer.style.flexWrap = 'wrap';
+      reactionContainer.style.maxWidth = '200px';
+      reactionContainer.style.borderTop = '1px solid #ccc';
+      reactionContainer.style.paddingTop = '3px';
+
+      reactions.forEach(emoji => {
+        const btn = document.createElement('span');
+        btn.textContent = emoji;
+        btn.style.marginRight = '8px';
+        btn.style.padding = '2px 6px';
+        btn.style.borderRadius = '4px';
+        btn.addEventListener('click', () => {
+          reactionCounts[emoji] = (reactionCounts[emoji] || 0) + 1;
+          updateReactionsDisplay();
+        });
+        reactionContainer.appendChild(btn);
+      });
+
+      const displayContainer = document.createElement('div');
+      displayContainer.style.marginTop = '5px';
+      displayContainer.style.fontSize = '0.9rem';
+      displayContainer.style.color = '#555';
+      displayContainer.style.display = 'flex';
+      displayContainer.style.gap = '8px';
+      displayContainer.style.flexWrap = 'wrap';
+      displayContainer.style.maxWidth = '200px';
+
+      function updateReactionsDisplay() {
+        displayContainer.innerHTML = '';
+        for (const [emoji, count] of Object.entries(reactionCounts)) {
+          const span = document.createElement('span');
+          span.textContent = `${emoji} ${count}`;
+          displayContainer.appendChild(span);
+        }
+      }
+
+      messageDiv.addEventListener('mouseenter', () => {
+        reactionContainer.style.display = 'flex';
+      });
+      messageDiv.addEventListener('mouseleave', () => {
+        reactionContainer.style.display = 'none';
+      });
+
+      messageDiv.appendChild(reactionContainer);
+      messageDiv.appendChild(displayContainer);
+    }
   </script>
 </body>
 </html>
