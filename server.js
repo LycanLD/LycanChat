@@ -12,6 +12,7 @@ const PORT = process.env.PORT || 3000;
 app.use(express.static(path.join(__dirname, 'public')));
 
 const users = new Map();
+const messageReactions = new Map(); // key: timestamp, value: { emoji: count, users: Set of usernames }
 
 io.on('connection', (socket) => {
   console.log('a user connected:', socket.id);
@@ -22,8 +23,32 @@ io.on('connection', (socket) => {
   });
 
   socket.on('chat message', (data) => {
-    // data should be { username, message, files? }
+    // data should be { username, message, files?, timestamp }
     io.emit('chat message', data);
+  });
+
+  socket.on('message reaction', ({ timestamp, emoji, username }) => {
+    if (!messageReactions.has(timestamp)) {
+      messageReactions.set(timestamp, {});
+    }
+    const reactions = messageReactions.get(timestamp);
+    if (!reactions[emoji]) {
+      reactions[emoji] = { count: 0, users: new Set() };
+    }
+    const userSet = reactions[emoji].users;
+    if (userSet.has(username)) {
+      // User already reacted with this emoji, remove reaction
+      userSet.delete(username);
+      reactions[emoji].count--;
+      if (reactions[emoji].count <= 0) {
+        delete reactions[emoji];
+      }
+    } else {
+      // Add reaction
+      userSet.add(username);
+      reactions[emoji].count++;
+    }
+    io.emit('message reaction update', { timestamp, reactions: serializeReactions(reactions) });
   });
 
   socket.on('typing', (username) => {
@@ -43,6 +68,14 @@ io.on('connection', (socket) => {
     console.log('user disconnected:', socket.id);
   });
 });
+
+function serializeReactions(reactions) {
+  const result = {};
+  for (const [emoji, data] of Object.entries(reactions)) {
+    result[emoji] = data.count;
+  }
+  return result;
+}
 
 server.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);

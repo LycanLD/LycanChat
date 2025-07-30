@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>LycanChat V3.4</title>
+  <title>LycanChat V3.5</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     :root {
@@ -371,7 +371,6 @@
     function addMessage(sender, text, isYou, timestamp) {
       const div = document.createElement('div');
       div.className = 'message' + (isYou ? ' you' : '');
-      div.title = new Date(timestamp).toLocaleString();
 
       const name = document.createElement('span');
       name.textContent = `${sender}: `;
@@ -380,7 +379,14 @@
       div.appendChild(name);
       div.appendChild(msg);
 
-      addReactionsUI(div);
+      const timestampDiv = document.createElement('div');
+      timestampDiv.textContent = new Date(timestamp).toLocaleString();
+      timestampDiv.style.fontSize = '0.75rem';
+      timestampDiv.style.color = '#666';
+      timestampDiv.style.marginTop = '4px';
+      div.appendChild(timestampDiv);
+
+      addReactionsUI(div, timestamp);
 
       messages.appendChild(div);
       messages.scrollTop = messages.scrollHeight;
@@ -389,7 +395,6 @@
     function addMessageWithFiles(sender, text, files, isYou, timestamp) {
       const div = document.createElement('div');
       div.className = 'message' + (isYou ? ' you' : '');
-      div.title = new Date(timestamp).toLocaleString();
 
       const senderSpan = document.createElement('span');
       senderSpan.textContent = `${sender}: `;
@@ -419,7 +424,14 @@
         }
       });
 
-      addReactionsUI(div);
+      const timestampDiv = document.createElement('div');
+      timestampDiv.textContent = new Date(timestamp).toLocaleString();
+      timestampDiv.style.fontSize = '0.75rem';
+      timestampDiv.style.color = '#666';
+      timestampDiv.style.marginTop = '4px';
+      div.appendChild(timestampDiv);
+
+      addReactionsUI(div, timestamp);
 
       messages.appendChild(div);
       messages.scrollTop = messages.scrollHeight;
@@ -427,8 +439,10 @@
 
     function addNotification(text) {
       const div = document.createElement('div');
-      div.className = 'message';
+      div.style.textAlign = 'center';
       div.style.fontStyle = 'italic';
+      div.style.color = '#666';
+      div.style.margin = '10px 0';
       div.textContent = text;
       messages.appendChild(div);
     }
@@ -448,7 +462,7 @@
       });
     }
 
-    function addReactionsUI(messageDiv) {
+    function addReactionsUI(messageDiv, timestamp) {
       const reactions = ['👍', '😂', '❤️', '😮', '😢', '👏'];
       const reactionCounts = {};
       const reactionContainer = document.createElement('div');
@@ -470,8 +484,7 @@
         btn.style.padding = '2px 6px';
         btn.style.borderRadius = '4px';
         btn.addEventListener('click', () => {
-          reactionCounts[emoji] = (reactionCounts[emoji] || 0) + 1;
-          updateReactionsDisplay();
+          socket.emit('message reaction', { timestamp, emoji });
         });
         reactionContainer.appendChild(btn);
       });
@@ -485,11 +498,16 @@
       displayContainer.style.flexWrap = 'wrap';
       displayContainer.style.maxWidth = '200px';
 
-      function updateReactionsDisplay() {
+      function updateReactionsDisplay(reactions) {
         displayContainer.innerHTML = '';
-        for (const [emoji, count] of Object.entries(reactionCounts)) {
+        for (const [emoji, count] of Object.entries(reactions)) {
           const span = document.createElement('span');
           span.textContent = `${emoji} ${count}`;
+          span.style.cursor = 'pointer';
+          span.addEventListener('click', () => {
+            // Toggle reaction on click
+            socket.emit('message reaction', { timestamp, emoji, username });
+          });
           displayContainer.appendChild(span);
         }
       }
@@ -503,7 +521,24 @@
 
       messageDiv.appendChild(reactionContainer);
       messageDiv.appendChild(displayContainer);
+
+      // Store update function for later use
+      messageDiv.updateReactionsDisplay = updateReactionsDisplay;
     }
-  </script>
+    </script>
+
+    <script>
+      socket.on('message reaction update', ({ timestamp, reactions }) => {
+        // Find the message div with matching timestamp title
+        const messageDivs = document.querySelectorAll('.message');
+        messageDivs.forEach(div => {
+          if (div.title === new Date(timestamp).toLocaleString()) {
+            if (div.updateReactionsDisplay) {
+              div.updateReactionsDisplay(reactions);
+            }
+          }
+        });
+      });
+    </script>
 </body>
 </html>
