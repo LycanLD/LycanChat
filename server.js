@@ -22,7 +22,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('chat message', (data) => {
-    // data should be { username, message }
+    // data should be { username, message, files? }
     io.emit('chat message', data);
   });
 
