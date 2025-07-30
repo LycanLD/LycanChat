@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>LycanChat V3.7</title>
+  <title>LycanChat V3.8</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     :root {
@@ -237,20 +237,49 @@
 
     function requestNotificationPermission() {
       if ('Notification' in window && Notification.permission !== 'granted') {
-        Notification.requestPermission();
+        Notification.requestPermission().then(permission => {
+          console.log('Notification permission:', permission);
+          if (permission !== 'granted') {
+            console.warn('Notification permission not granted');
+          }
+        }).catch(err => {
+          console.error('Notification permission request error:', err);
+        });
+      } else {
+        console.log('Notification permission already:', Notification.permission);
       }
     }
 
     function showBrowserNotification(title, body) {
-      if ('Notification' in window && Notification.permission === 'granted') {
-        const notification = new Notification(title, {
-          body: body,
-          icon: 'https://raw.githubusercontent.com/LycanLD/LycanChat/refs/heads/main/icon.png'
+      if (!('Notification' in window)) {
+        console.warn('This browser does not support notifications.');
+        return;
+      }
+      if (Notification.permission === 'granted') {
+        try {
+          const notification = new Notification(title, {
+            body: body,
+            icon: 'https://raw.githubusercontent.com/LycanLD/LycanChat/refs/heads/main/icon.png'
+          });
+          notification.onclick = () => {
+            window.focus();
+            notification.close();
+          };
+          console.log('Notification shown:', title, body);
+        } catch (err) {
+          console.error('Error showing notification:', err);
+        }
+      } else if (Notification.permission !== 'denied') {
+        Notification.requestPermission().then(permission => {
+          console.log('Notification permission after request:', permission);
+          if (permission === 'granted') {
+            showBrowserNotification(title, body);
+          }
+        }).catch(err => {
+          console.error('Notification permission request error:', err);
         });
-        notification.onclick = () => {
-          window.focus();
-          notification.close();
-        };
+      } else {
+        console.warn('Notification permission denied');
       }
     }
 
