@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>LycanChat V3.6</title>
+  <title>LycanChat V3.7</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     :root {
@@ -218,6 +218,11 @@
     let username = '';
     let selectedFiles = [];
 
+    let unreadCount = 0;
+    let originalTitle = document.title;
+    let flickerInterval = null;
+    const notificationSound = new Audio('https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg');
+
     const loginScreen = document.getElementById('login-screen');
     const chatScreen = document.getElementById('chat-screen');
     const loginInput = document.getElementById('login-input');
@@ -230,6 +235,45 @@
     const fileInput = document.getElementById('file-input');
     const previewBar = document.getElementById('preview-bar');
 
+    function requestNotificationPermission() {
+      if ('Notification' in window && Notification.permission !== 'granted') {
+        Notification.requestPermission();
+      }
+    }
+
+    function showBrowserNotification(title, body) {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        const notification = new Notification(title, {
+          body: body,
+          icon: 'https://raw.githubusercontent.com/LycanLD/LycanChat/refs/heads/main/icon.png'
+        });
+        notification.onclick = () => {
+          window.focus();
+          notification.close();
+        };
+      }
+    }
+
+    function startTitleFlicker() {
+      if (flickerInterval) return;
+      flickerInterval = setInterval(() => {
+        document.title = document.title === 'New Message!' ? originalTitle : 'New Message!';
+      }, 1000);
+    }
+
+    function stopTitleFlicker() {
+      if (flickerInterval) {
+        clearInterval(flickerInterval);
+        flickerInterval = null;
+        document.title = originalTitle;
+        unreadCount = 0;
+      }
+    }
+
+    window.addEventListener('focus', () => {
+      stopTitleFlicker();
+    });
+
     loginButton.addEventListener('click', () => {
       const enteredUsername = loginInput.value.trim();
       if (enteredUsername) {
@@ -238,6 +282,7 @@
         chatScreen.style.display = 'flex';
         sendButton.disabled = false;
         socket.emit('join', username);
+        requestNotificationPermission();
       }
     });
 
@@ -252,6 +297,12 @@
     });
 
     socket.on('chat message', (data) => {
+      if (data.username !== username) {
+        notificationSound.play().catch(() => {});
+        showBrowserNotification('New message from ' + data.username, data.message || 'Image/File');
+        unreadCount++;
+        startTitleFlicker();
+      }
       if (data.files && data.files.length > 0) {
         addMessageWithFiles(data.username, data.message, data.files, data.username === username);
       } else {
