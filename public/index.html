@@ -180,7 +180,7 @@
 </head>
 <body>
   <div id="login-screen" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: linear-gradient(135deg, #ff6600, #ffcc99); color: white;">
-    <img src="https://raw.githubusercontent.com/LycanLD/LycanChat/refs/heads/main/banner.png" alt="Banner" style="max-width: 80%; height: auto; margin-bottom: 20px; border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);" />
+    <img src="https://raw.githubusercontent.com/LycanLD/LycanChat/refs/heads/main/banner.png" alt="Banner" style="max-width: 65%; height: auto; margin-bottom: 20px; border-radius: 12px;" />
     <div style="text-align: center; margin-bottom: 20px;">
       <h1 style="font-size: 3rem; margin: 0;">Welcome to LycanChat</h1>
       <p style="font-size: 1.2rem; margin-top: 10px;">Connect and chat with your friends instantly</p>
@@ -389,15 +389,6 @@
       div.appendChild(name);
       div.appendChild(msg);
 
-      const timestampDiv = document.createElement('div');
-      timestampDiv.textContent = new Date(timestamp).toLocaleString();
-      timestampDiv.style.fontSize = '0.75rem';
-      timestampDiv.style.color = '#666';
-      timestampDiv.style.marginTop = '4px';
-      div.appendChild(timestampDiv);
-
-      addReactionsUI(div, timestamp);
-
       messages.appendChild(div);
       messages.scrollTop = messages.scrollHeight;
     }
@@ -434,15 +425,6 @@
         }
       });
 
-      const timestampDiv = document.createElement('div');
-      timestampDiv.textContent = new Date(timestamp).toLocaleString();
-      timestampDiv.style.fontSize = '0.75rem';
-      timestampDiv.style.color = '#666';
-      timestampDiv.style.marginTop = '4px';
-      div.appendChild(timestampDiv);
-
-      addReactionsUI(div, timestamp);
-
       messages.appendChild(div);
       messages.scrollTop = messages.scrollHeight;
     }
@@ -471,76 +453,6 @@
         return '<a href="' + url + '" target="_blank" rel="noopener noreferrer">' + url + '</a>';
       });
     }
-
-    function addReactionsUI(messageDiv, timestamp) {
-      const reactions = ['👍', '😂', '❤️', '😮', '😢', '👏'];
-      const reactionCounts = {};
-      const reactionContainer = document.createElement('div');
-      reactionContainer.style.display = 'none';
-      reactionContainer.style.marginTop = '5px';
-      reactionContainer.style.gap = '5px';
-      reactionContainer.style.cursor = 'pointer';
-      reactionContainer.style.userSelect = 'none';
-      reactionContainer.style.fontSize = '1.2rem';
-      reactionContainer.style.flexWrap = 'wrap';
-      reactionContainer.style.maxWidth = '200px';
-      reactionContainer.style.borderTop = '1px solid #ccc';
-      reactionContainer.style.paddingTop = '3px';
-
-      reactions.forEach(emoji => {
-        const btn = document.createElement('span');
-        btn.textContent = emoji;
-        btn.style.marginRight = '8px';
-        btn.style.padding = '2px 6px';
-        btn.style.borderRadius = '4px';
-        btn.addEventListener('click', () => {
-          socket.emit('message reaction', { timestamp, emoji });
-        });
-        reactionContainer.appendChild(btn);
-      });
-
-      const displayContainer = document.createElement('div');
-      displayContainer.style.marginTop = '5px';
-      displayContainer.style.fontSize = '0.9rem';
-      displayContainer.style.color = '#555';
-      displayContainer.style.display = 'flex';
-      displayContainer.style.gap = '8px';
-      displayContainer.style.flexWrap = 'wrap';
-      displayContainer.style.maxWidth = '200px';
-
-      function updateReactionsDisplay(reactions) {
-        displayContainer.innerHTML = '';
-        for (const [emoji, count] of Object.entries(reactions)) {
-          const span = document.createElement('span');
-          span.textContent = `${emoji} ${count}`;
-          span.style.cursor = 'pointer';
-          span.addEventListener('click', () => {
-            // Toggle reaction on click
-            socket.emit('message reaction', { timestamp, emoji, username });
-          });
-          displayContainer.appendChild(span);
-        }
-      }
-
-      messageDiv.addEventListener('mouseenter', () => {
-        reactionContainer.style.display = 'flex';
-      });
-      messageDiv.addEventListener('mouseleave', () => {
-        reactionContainer.style.display = 'none';
-      });
-
-      messageDiv.appendChild(reactionContainer);
-      messageDiv.appendChild(displayContainer);
-
-      // Store update function for later use
-      messageDiv.updateReactionsDisplay = updateReactionsDisplay;
-    }
-    </script>
-
-    <script>
-      socket.on('message reaction update', ({ timestamp, reactions }) => {
-        // Remove reaction update handling since reactions are removed
-      });
-    </script>
+  </script>
 </body>
 </html>
